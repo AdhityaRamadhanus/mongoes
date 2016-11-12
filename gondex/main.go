@@ -9,6 +9,7 @@ import (
 	elastic "gopkg.in/olivere/elastic.v3"
 	"log"
 	"mongoes/libs"
+	"os"
 )
 
 func fatal(e error) {
@@ -39,6 +40,11 @@ func main() {
 		typeName = collName
 	}
 
+	// Set Tracer
+	tracer := libs.NewTracer(os.Stdout)
+
+	// Get connected to mongodb
+	tracer.Trace("Connecting to Mongodb at", *dbUri)
 	session, err := mongo.Dial(*dbUri)
 	if err != nil {
 		fatal(err)
@@ -46,6 +52,7 @@ func main() {
 	}
 	defer session.Close()
 
+	tracer.Trace("Connecting to elasticsearch cluster")
 	client, err := elastic.NewClient()
 	if err != nil {
 		fatal(err)
@@ -57,6 +64,7 @@ func main() {
 		fatal(err)
 		return
 	}
+	tracer.Trace("Create Mongodb to ES Mapping")
 	rawMapping, _ := libs.ReadMappingJson(*mappingFile)
 	esMapping, _ := libs.CreateMapping(rawMapping)
 	_, err = client.PutMapping().Index(*indexName).Type(*typeName).BodyJson(esMapping).Do()
@@ -64,10 +72,12 @@ func main() {
 		fatal(err)
 		return
 	}
+
 	p := make(map[string]interface{})
 	iter := session.DB(*dbName).C(*collName).Find(nil).Iter()
 	for iter.Next(&p) {
-		fmt.Println(p["_id"].(bson.ObjectId).Hex())
+		tracer.Trace("Indexing mongodb Documents", p["_id"].(bson.ObjectId).Hex())
+		// fmt.Println(p["_id"].(bson.ObjectId).Hex())
 		var esBody = make(map[string]interface{})
 		for k, v := range rawMapping {
 			mgoVal, ok := p[k]
@@ -79,7 +89,7 @@ func main() {
 				esBody[key.(string)] = mgoVal
 			}
 		}
-		fmt.Println(esBody)
+		// fmt.Println(esBody)
 		_, err = client.Index().
 			Index(*indexName).
 			Type(*typeName).

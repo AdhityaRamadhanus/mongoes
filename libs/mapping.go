@@ -2,7 +2,6 @@ package libs
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"strings"
 )
@@ -42,9 +41,9 @@ func CreateMapping(doc JSON) (JSON, error) {
 			}
 		}
 	}
-	fmt.Println(mapping)
-	if jsonString, err := json.Marshal(mapping); err == nil {
-		fmt.Println(string(jsonString))
-	}
+	// fmt.Println(mapping)
+	// if jsonString, err := json.Marshal(mapping); err == nil {
+	// 	fmt.Println(string(jsonString))
+	// }
 	return mapping, nil
 }
