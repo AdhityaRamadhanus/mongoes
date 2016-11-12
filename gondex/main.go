@@ -7,9 +7,11 @@ import (
 	mongo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	elastic "gopkg.in/olivere/elastic.v3"
-	"log"
+	// "log"
 	"mongoes/libs"
 	"os"
+	// "sync/atomic"
+	"time"
 )
 
 func fatal(e error) {
@@ -17,8 +19,24 @@ func fatal(e error) {
 	flag.PrintDefaults()
 }
 
-var counts int = 0
+var counts int32 = 0
 
+type Message struct {
+	Id       bson.ObjectId
+	Document map[string]interface{}
+}
+
+func printStats(stats elastic.BulkProcessorStats) {
+	fmt.Println("Flushed:", stats.Flushed)
+	fmt.Println("Committed:", stats.Committed)
+	fmt.Println("Indexed:", stats.Indexed)
+	fmt.Println("Created:", stats.Created)
+	fmt.Println("Updated:", stats.Updated)
+	fmt.Println("Deleted:", stats.Deleted)
+	fmt.Println("Succedeed:", stats.Succeeded)
+	fmt.Println("Failed:", stats.Failed)
+
+}
 func main() {
 	var dbName = flag.String("db", "", "Mongodb DB Name")
 	var collName = flag.String("collection", "", "Mongodb Collection Name")
@@ -72,12 +90,14 @@ func main() {
 		fatal(err)
 		return
 	}
-
 	p := make(map[string]interface{})
 	iter := session.DB(*dbName).C(*collName).Find(nil).Iter()
+	start := time.Now()
+	fmt.Println("Start Indexing MongoDb")
+	bulkProcessorService := elastic.NewBulkProcessorService(client).Workers(4).Stats(true)
+	bulkProcessor, _ := bulkProcessorService.Do()
+	bulkProcessor.Start()
 	for iter.Next(&p) {
-		tracer.Trace("Indexing mongodb Documents", p["_id"].(bson.ObjectId).Hex())
-		// fmt.Println(p["_id"].(bson.ObjectId).Hex())
 		var esBody = make(map[string]interface{})
 		for k, v := range rawMapping {
 			mgoVal, ok := p[k]
@@ -89,20 +109,17 @@ func main() {
 				esBody[key.(string)] = mgoVal
 			}
 		}
-		// fmt.Println(esBody)
-		_, err = client.Index().
+		bulkRequest := elastic.NewBulkIndexRequest().
 			Index(*indexName).
 			Type(*typeName).
 			Id(p["_id"].(bson.ObjectId).Hex()).
-			BodyJson(esBody).
-			Refresh(true).
-			Do()
-		if err != nil {
-			log.Println(err)
-		} else {
-			counts += 1
-		}
+			Doc(esBody)
+
+		bulkProcessor.Add(bulkRequest)
 	}
 	iter.Close()
-	fmt.Println("Finished indexing", counts, "documents")
+	elapsed := time.Since(start)
+	stats := bulkProcessor.Stats()
+	fmt.Println("Finished indexing", stats.Indexed, "documents in", elapsed)
+	printStats(stats)
 }
