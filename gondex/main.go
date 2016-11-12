@@ -65,7 +65,7 @@ func main() {
 		return
 	}
 	p := make(map[string]interface{})
-	iter := session.DB(*dbName).C(*collName).Find(bson.M{"is_active": true, "company_name": "Bukalapak"}).Iter()
+	iter := session.DB(*dbName).C(*collName).Find(nil).Iter()
 	for iter.Next(&p) {
 		fmt.Println(p["_id"].(bson.ObjectId).Hex())
 		var esBody = make(map[string]interface{})
