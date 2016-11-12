@@ -8,13 +8,15 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	elastic "gopkg.in/olivere/elastic.v3"
 	"log"
-	"mongoes/gondex/libs"
+	"mongoes/libs"
 )
 
 func fatal(e error) {
 	fmt.Println(e)
 	flag.PrintDefaults()
 }
+
+var counts int = 0
 
 func main() {
 	var dbName = flag.String("db", "", "Mongodb DB Name")
@@ -87,7 +89,10 @@ func main() {
 			Do()
 		if err != nil {
 			log.Println(err)
+		} else {
+			counts += 1
 		}
 	}
 	iter.Close()
+	fmt.Println("Finished indexing", counts, "documents")
 }
