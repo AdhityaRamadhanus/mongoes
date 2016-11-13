@@ -94,9 +94,9 @@ func main() {
 	iter := session.DB(*dbName).C(*collName).Find(nil).Iter()
 	start := time.Now()
 	fmt.Println("Start Indexing MongoDb")
-	bulkProcessorService := elastic.NewBulkProcessorService(client).Workers(4).Stats(true)
-	bulkProcessor, _ := bulkProcessorService.Do()
-	bulkProcessor.Start()
+	bulkService := elastic.NewBulkService(client).Index(*indexName).Type(*typeName)
+	// bulkProcessor, _ := bulkProcessorService.Do()
+	// bulkProcessor.Start()
 	for iter.Next(&p) {
 		var esBody = make(map[string]interface{})
 		for k, v := range rawMapping {
@@ -115,11 +115,17 @@ func main() {
 			Id(p["_id"].(bson.ObjectId).Hex()).
 			Doc(esBody)
 
-		bulkProcessor.Add(bulkRequest)
+		// bulkProcessor.Add(bulkRequest)
+		bulkService.Add(bulkRequest)
+		if bulkService.NumberOfActions() == 1000 {
+			bulkResponse, _ := bulkService.Do()
+			counts += int32(len(bulkResponse.Indexed()))
+			fmt.Println(counts, " documents indexed")
+		}
 	}
 	iter.Close()
 	elapsed := time.Since(start)
-	stats := bulkProcessor.Stats()
-	fmt.Println("Finished indexing", stats.Indexed, "documents in", elapsed)
-	printStats(stats)
+	// stats := bulkProcessor.Stats()
+	fmt.Println("Finished indexing documents in", elapsed)
+	// printStats(stats)
 }
