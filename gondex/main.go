@@ -11,6 +11,7 @@ import (
 	"mongoes/libs"
 	"os"
 	// "sync/atomic"
+	"sync"
 	"time"
 )
 
@@ -20,22 +21,26 @@ func fatal(e error) {
 }
 
 var counts int32 = 0
+var wg sync.WaitGroup
 
-type Message struct {
-	Id       bson.ObjectId
-	Document map[string]interface{}
-}
-
-func printStats(stats elastic.BulkProcessorStats) {
-	fmt.Println("Flushed:", stats.Flushed)
-	fmt.Println("Committed:", stats.Committed)
-	fmt.Println("Indexed:", stats.Indexed)
-	fmt.Println("Created:", stats.Created)
-	fmt.Println("Updated:", stats.Updated)
-	fmt.Println("Deleted:", stats.Deleted)
-	fmt.Println("Succedeed:", stats.Succeeded)
-	fmt.Println("Failed:", stats.Failed)
-
+func doService(id int, client *elastic.Client, indexName string, typeName string, requests <-chan elastic.BulkableRequest) {
+	defer wg.Done()
+	bulkService := elastic.NewBulkService(client).Index(indexName).Type(typeName)
+	counts := 0
+	for v := range requests {
+		bulkService.Add(v)
+		if bulkService.NumberOfActions() == 1000 {
+			bulkResponse, _ := bulkService.Do()
+			counts += len(bulkResponse.Indexed())
+		}
+	}
+	// requests closed
+	if bulkService.NumberOfActions() > 0 {
+		bulkResponse, _ := bulkService.Do()
+		counts += len(bulkResponse.Indexed())
+	}
+	fmt.Println("Worker", id, " Finished")
+	fmt.Println("Indexed", counts)
 }
 func main() {
 	var dbName = flag.String("db", "", "Mongodb DB Name")
@@ -44,6 +49,7 @@ func main() {
 	var indexName = flag.String("index", "", "ES Index Name")
 	var typeName = flag.String("type", "", "ES Type Name")
 	var mappingFile = flag.String("mapping", "", "Mapping mongodb field to es")
+	wg.Add(2)
 	flag.Parse()
 	if len(*dbName) == 0 || len(*collName) == 0 {
 		fatal(errors.New("Please provide db and collection name"))
@@ -94,9 +100,10 @@ func main() {
 	iter := session.DB(*dbName).C(*collName).Find(nil).Iter()
 	start := time.Now()
 	fmt.Println("Start Indexing MongoDb")
-	bulkService := elastic.NewBulkService(client).Index(*indexName).Type(*typeName)
-	// bulkProcessor, _ := bulkProcessorService.Do()
-	// bulkProcessor.Start()
+	requests := make(chan elastic.BulkableRequest)
+	for i := 0; i < 2; i++ {
+		go doService(i, client, *indexName, *typeName, requests)
+	}
 	for iter.Next(&p) {
 		var esBody = make(map[string]interface{})
 		for k, v := range rawMapping {
@@ -114,18 +121,11 @@ func main() {
 			Type(*typeName).
 			Id(p["_id"].(bson.ObjectId).Hex()).
 			Doc(esBody)
-
-		// bulkProcessor.Add(bulkRequest)
-		bulkService.Add(bulkRequest)
-		if bulkService.NumberOfActions() == 1000 {
-			bulkResponse, _ := bulkService.Do()
-			counts += int32(len(bulkResponse.Indexed()))
-			fmt.Println(counts, " documents indexed")
-		}
+		requests <- bulkRequest
 	}
+	close(requests)
 	iter.Close()
+	wg.Wait()
 	elapsed := time.Since(start)
-	// stats := bulkProcessor.Stats()
 	fmt.Println("Finished indexing documents in", elapsed)
-	// printStats(stats)
 }
