@@ -7,9 +7,12 @@ import (
 	mongo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	elastic "gopkg.in/olivere/elastic.v3"
-	"log"
+	// "log"
 	"mongoes/libs"
 	"os"
+	// "sync/atomic"
+	"sync"
+	"time"
 )
 
 func fatal(e error) {
@@ -17,8 +20,28 @@ func fatal(e error) {
 	flag.PrintDefaults()
 }
 
-var counts int = 0
+var counts int32 = 0
+var wg sync.WaitGroup
 
+func doService(id int, client *elastic.Client, indexName string, typeName string, requests <-chan elastic.BulkableRequest) {
+	defer wg.Done()
+	bulkService := elastic.NewBulkService(client).Index(indexName).Type(typeName)
+	counts := 0
+	for v := range requests {
+		bulkService.Add(v)
+		if bulkService.NumberOfActions() == 1000 {
+			bulkResponse, _ := bulkService.Do()
+			counts += len(bulkResponse.Indexed())
+		}
+	}
+	// requests closed
+	if bulkService.NumberOfActions() > 0 {
+		bulkResponse, _ := bulkService.Do()
+		counts += len(bulkResponse.Indexed())
+	}
+	fmt.Println("Worker", id, " Finished")
+	fmt.Println("Indexed", counts)
+}
 func main() {
 	var dbName = flag.String("db", "", "Mongodb DB Name")
 	var collName = flag.String("collection", "", "Mongodb Collection Name")
@@ -26,6 +49,7 @@ func main() {
 	var indexName = flag.String("index", "", "ES Index Name")
 	var typeName = flag.String("type", "", "ES Type Name")
 	var mappingFile = flag.String("mapping", "", "Mapping mongodb field to es")
+	wg.Add(2)
 	flag.Parse()
 	if len(*dbName) == 0 || len(*collName) == 0 {
 		fatal(errors.New("Please provide db and collection name"))
@@ -72,12 +96,15 @@ func main() {
 		fatal(err)
 		return
 	}
-
 	p := make(map[string]interface{})
 	iter := session.DB(*dbName).C(*collName).Find(nil).Iter()
+	start := time.Now()
+	fmt.Println("Start Indexing MongoDb")
+	requests := make(chan elastic.BulkableRequest)
+	for i := 0; i < 2; i++ {
+		go doService(i, client, *indexName, *typeName, requests)
+	}
 	for iter.Next(&p) {
-		tracer.Trace("Indexing mongodb Documents", p["_id"].(bson.ObjectId).Hex())
-		// fmt.Println(p["_id"].(bson.ObjectId).Hex())
 		var esBody = make(map[string]interface{})
 		for k, v := range rawMapping {
 			mgoVal, ok := p[k]
@@ -89,20 +116,16 @@ func main() {
 				esBody[key.(string)] = mgoVal
 			}
 		}
-		// fmt.Println(esBody)
-		_, err = client.Index().
+		bulkRequest := elastic.NewBulkIndexRequest().
 			Index(*indexName).
 			Type(*typeName).
 			Id(p["_id"].(bson.ObjectId).Hex()).
-			BodyJson(esBody).
-			Refresh(true).
-			Do()
-		if err != nil {
-			log.Println(err)
-		} else {
-			counts += 1
-		}
+			Doc(esBody)
+		requests <- bulkRequest
 	}
+	close(requests)
 	iter.Close()
-	fmt.Println("Finished indexing", counts, "documents")
+	wg.Wait()
+	elapsed := time.Since(start)
+	fmt.Println("Finished indexing documents in", elapsed)
 }

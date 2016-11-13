@@ -2,8 +2,8 @@
 Set of commandline tools to synchronize mongodb documents and elasticsearch index
 
 <p>
-  <a href="#installation">Gondex</a> |
-  <a href="#documentation">Gowatch</a> |
+  <a href="#Gondex">Gondex</a> |
+  <a href="#Gowatch">Gowatch</a> |
   <a href="#licenses">License</a>
   <br><br>
   <blockquote>
