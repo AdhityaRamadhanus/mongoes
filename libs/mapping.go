@@ -8,7 +8,7 @@ import (
 
 type JSON map[string]interface{}
 
-func ReadMappingJson(filename string) (JSON, error) {
+func ReadJson(filename string) (JSON, error) {
 	res, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err

@@ -11,6 +11,7 @@ import (
 	"mongoes/libs"
 	"os"
 	// "sync/atomic"
+	// "runtime"
 	"sync"
 	"time"
 )
@@ -49,8 +50,12 @@ func main() {
 	var indexName = flag.String("index", "", "ES Index Name")
 	var typeName = flag.String("type", "", "ES Type Name")
 	var mappingFile = flag.String("mapping", "", "Mapping mongodb field to es")
+	var queryFile = flag.String("filter", "", "Query to filter mongodb docs")
+	var esUri = flag.String("--esUri", "http://localhost:9200", "Elasticsearch URI")
+
 	wg.Add(2)
 	flag.Parse()
+
 	if len(*dbName) == 0 || len(*collName) == 0 {
 		fatal(errors.New("Please provide db and collection name"))
 		return
@@ -62,6 +67,15 @@ func main() {
 
 	if len(*typeName) == 0 {
 		typeName = collName
+	}
+
+	var query map[string]interface{}
+	if len(*queryFile) > 0 {
+		var queryerr error
+		query, queryerr = libs.ReadJson(*queryFile)
+		if queryerr != nil {
+			fmt.Println(queryerr)
+		}
 	}
 
 	// Set Tracer
@@ -77,7 +91,7 @@ func main() {
 	defer session.Close()
 
 	tracer.Trace("Connecting to elasticsearch cluster")
-	client, err := elastic.NewClient()
+	client, err := elastic.NewClient(elastic.SetURL(*esUri))
 	if err != nil {
 		fatal(err)
 		return
@@ -89,7 +103,11 @@ func main() {
 		return
 	}
 	tracer.Trace("Create Mongodb to ES Mapping")
-	rawMapping, _ := libs.ReadMappingJson(*mappingFile)
+	rawMapping, err := libs.ReadJson(*mappingFile)
+	if err != nil {
+		fatal(err)
+		return
+	}
 	esMapping, _ := libs.CreateMapping(rawMapping)
 	_, err = client.PutMapping().Index(*indexName).Type(*typeName).BodyJson(esMapping).Do()
 	if err != nil {
@@ -97,7 +115,10 @@ func main() {
 		return
 	}
 	p := make(map[string]interface{})
-	iter := session.DB(*dbName).C(*collName).Find(nil).Iter()
+	// query := map[string]interface{}{
+	// 	"source": "Bukalapak",
+	// }
+	iter := session.DB(*dbName).C(*collName).Find(query).Iter()
 	start := time.Now()
 	fmt.Println("Start Indexing MongoDb")
 	requests := make(chan elastic.BulkableRequest)
