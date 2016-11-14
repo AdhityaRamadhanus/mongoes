@@ -51,9 +51,11 @@ func main() {
 	var typeName = flag.String("type", "", "ES Type Name")
 	var mappingFile = flag.String("mapping", "", "Mapping mongodb field to es")
 	var queryFile = flag.String("filter", "", "Query to filter mongodb docs")
+	var esUri = flag.String("--esUri", "http://localhost:9200", "Elasticsearch URI")
 
 	wg.Add(2)
 	flag.Parse()
+
 	if len(*dbName) == 0 || len(*collName) == 0 {
 		fatal(errors.New("Please provide db and collection name"))
 		return
@@ -89,7 +91,7 @@ func main() {
 	defer session.Close()
 
 	tracer.Trace("Connecting to elasticsearch cluster")
-	client, err := elastic.NewClient()
+	client, err := elastic.NewClient(elastic.SetURL(*esUri))
 	if err != nil {
 		fatal(err)
 		return
