@@ -18,14 +18,16 @@ Gondex
 Usage
 ------------
 ```
-gondex --db=<dbname> --collection=<collectioname> --index=<indexname> --type=<typename> --dbUri=<MongoURI> --mapping=/some/mapping.json
+gondex --db=<dbname> --collection=<collectioname> --index=<indexname> --type=<typename> --dbUri=<MongoURI> --mapping=/some/mapping.json --filter=/some/query.json --esUri=<elasticsearchURI>
 ```
 * db, Your Mongodb DB name
 * collection, Your mongodb collection name
 * index, Preferred elasticsearch index name (db name will be used if you leave this empty)
 * type, Preferred elasticsearch type name (collection name will be used if you leave this empty)
 * dbUri, MongoDB URI
-* mapping, Json file that defined how you want to map every document in mongodb to elasticsearch
+* esUri, Elasticsearch URI
+* filter, Json file that contains mongodb query to filter mongodb documents
+* mapping, Json file that define how you want to map every document in mongodb to elasticsearch
 * Mapping Example
 ```
 {
