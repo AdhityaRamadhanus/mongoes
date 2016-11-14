@@ -11,6 +11,7 @@ import (
 	"mongoes/libs"
 	"os"
 	// "sync/atomic"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -89,7 +90,11 @@ func main() {
 		return
 	}
 	tracer.Trace("Create Mongodb to ES Mapping")
-	rawMapping, _ := libs.ReadMappingJson(*mappingFile)
+	rawMapping, err := libs.ReadMappingJson(*mappingFile)
+	if err != nil {
+		fatal(err)
+		return
+	}
 	esMapping, _ := libs.CreateMapping(rawMapping)
 	_, err = client.PutMapping().Index(*indexName).Type(*typeName).BodyJson(esMapping).Do()
 	if err != nil {
