@@ -24,8 +24,13 @@ func fatal(e error) {
 var counts int32 = 0
 var wg sync.WaitGroup
 
-func doService(id int, client *elastic.Client, indexName string, typeName string, requests <-chan elastic.BulkableRequest) {
+func doService(id int, esUri, indexName, typeName string, requests <-chan elastic.BulkableRequest) {
 	defer wg.Done()
+	client, err := elastic.NewClient(elastic.SetURL(esUri))
+	if err != nil {
+		return
+	}
+
 	bulkService := elastic.NewBulkService(client).Index(indexName).Type(typeName)
 	counts := 0
 	for v := range requests {
@@ -52,8 +57,9 @@ func main() {
 	var mappingFile = flag.String("mapping", "", "Mapping mongodb field to es")
 	var queryFile = flag.String("filter", "", "Query to filter mongodb docs")
 	var esUri = flag.String("--esUri", "http://localhost:9200", "Elasticsearch URI")
+	var numWorkers = flag.Int("--workers", 2, "Number of concurrent workers")
 
-	wg.Add(2)
+	wg.Add(*numWorkers)
 	flag.Parse()
 
 	if len(*dbName) == 0 || len(*collName) == 0 {
@@ -122,8 +128,8 @@ func main() {
 	start := time.Now()
 	fmt.Println("Start Indexing MongoDb")
 	requests := make(chan elastic.BulkableRequest)
-	for i := 0; i < 2; i++ {
-		go doService(i, client, *indexName, *typeName, requests)
+	for i := 0; i < *numWorkers; i++ {
+		go doService(i, *esUri, *indexName, *typeName, requests)
 	}
 	for iter.Next(&p) {
 		var esBody = make(map[string]interface{})
