@@ -10,7 +10,7 @@ import (
 	// "log"
 	"mongoes/libs"
 	"os"
-	// "sync/atomic"
+	"sync/atomic"
 	// "runtime"
 	"sync"
 	"time"
@@ -23,6 +23,14 @@ func fatal(e error) {
 
 var counts int32 = 0
 var wg sync.WaitGroup
+var ProgressQueue = make(chan int)
+
+func peekProgress() {
+	for amounts := range ProgressQueue {
+		atomic.AddInt32(&counts, int32(amounts))
+		fmt.Printf("\r %d documents indexed", int(atomic.LoadInt32(&counts)))
+	}
+}
 
 func doService(id int, esUri, indexName, typeName string, requests <-chan elastic.BulkableRequest) {
 	defer wg.Done()
@@ -32,21 +40,20 @@ func doService(id int, esUri, indexName, typeName string, requests <-chan elasti
 	}
 
 	bulkService := elastic.NewBulkService(client).Index(indexName).Type(typeName)
-	counts := 0
+	// counts := 0
 	for v := range requests {
 		bulkService.Add(v)
 		if bulkService.NumberOfActions() == 1000 {
 			bulkResponse, _ := bulkService.Do()
-			counts += len(bulkResponse.Indexed())
+			ProgressQueue <- len(bulkResponse.Indexed())
 		}
 	}
 	// requests closed
 	if bulkService.NumberOfActions() > 0 {
 		bulkResponse, _ := bulkService.Do()
-		counts += len(bulkResponse.Indexed())
+		ProgressQueue <- len(bulkResponse.Indexed())
+
 	}
-	fmt.Println("Worker", id, " Finished")
-	fmt.Println("Indexed", counts)
 }
 func main() {
 	var dbName = flag.String("db", "", "Mongodb DB Name")
@@ -121,16 +128,16 @@ func main() {
 		return
 	}
 	p := make(map[string]interface{})
-	// query := map[string]interface{}{
-	// 	"source": "Bukalapak",
-	// }
 	iter := session.DB(*dbName).C(*collName).Find(query).Iter()
 	start := time.Now()
-	fmt.Println("Start Indexing MongoDb")
+	// fmt.Println("Start Indexing MongoDb")
 	requests := make(chan elastic.BulkableRequest)
+	// spawn workers
 	for i := 0; i < *numWorkers; i++ {
 		go doService(i, *esUri, *indexName, *typeName, requests)
 	}
+	// spawn observer
+	go peekProgress()
 	for iter.Next(&p) {
 		var esBody = make(map[string]interface{})
 		for k, v := range rawMapping {
@@ -153,6 +160,7 @@ func main() {
 	close(requests)
 	iter.Close()
 	wg.Wait()
+	close(ProgressQueue)
 	elapsed := time.Since(start)
-	fmt.Println("Finished indexing documents in", elapsed)
+	fmt.Printf("\n Finished indexing documents in", elapsed)
 }
