@@ -2,12 +2,13 @@ package mongoes
 
 import (
 	"bytes"
+	"github.com/AdhityaRamadhanus/mongoes"
 	"testing"
 )
 
 func TestNew(t *testing.T) {
 	var buf bytes.Buffer
-	tracer := New(&buf)
+	tracer := mongoes.NewTracer(&buf)
 	if tracer == nil {
 		t.Error("Return from New should not be nil")
 	} else {
@@ -19,6 +20,6 @@ func TestNew(t *testing.T) {
 }
 
 func TestOff(t *testing.T) {
-	var silentTracer Tracer = Off()
+	var silentTracer mongoes.Tracer = mongoes.OffTracer()
 	silentTracer.Trace("Nothing")
 }
