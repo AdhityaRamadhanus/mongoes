@@ -10,9 +10,9 @@ import (
 	// "log"
 	"mongoes/libs"
 	"os"
-	"sync/atomic"
 	// "runtime"
 	"sync"
+	// "sync/atomic"
 	"time"
 )
 
@@ -21,16 +21,7 @@ func fatal(e error) {
 	flag.PrintDefaults()
 }
 
-var counts int32 = 0
 var wg sync.WaitGroup
-var ProgressQueue = make(chan int)
-
-func peekProgress() {
-	for amounts := range ProgressQueue {
-		atomic.AddInt32(&counts, int32(amounts))
-		fmt.Printf("\r %d documents indexed", int(atomic.LoadInt32(&counts)))
-	}
-}
 
 func doService(id int, esUri, indexName, typeName string, requests <-chan elastic.BulkableRequest) {
 	defer wg.Done()
@@ -38,23 +29,23 @@ func doService(id int, esUri, indexName, typeName string, requests <-chan elasti
 	if err != nil {
 		return
 	}
-
+	counts := 0
 	bulkService := elastic.NewBulkService(client).Index(indexName).Type(typeName)
-	// counts := 0
 	for v := range requests {
 		bulkService.Add(v)
 		if bulkService.NumberOfActions() == 1000 {
 			bulkResponse, _ := bulkService.Do()
-			ProgressQueue <- len(bulkResponse.Indexed())
+			counts += len(bulkResponse.Indexed())
 		}
 	}
 	// requests closed
 	if bulkService.NumberOfActions() > 0 {
 		bulkResponse, _ := bulkService.Do()
-		ProgressQueue <- len(bulkResponse.Indexed())
-
+		counts += len(bulkResponse.Indexed())
 	}
+	fmt.Println("Worker ", id, "finished indexing ", counts, "documents")
 }
+
 func main() {
 	var dbName = flag.String("db", "", "Mongodb DB Name")
 	var collName = flag.String("collection", "", "Mongodb Collection Name")
@@ -129,15 +120,15 @@ func main() {
 	}
 	p := make(map[string]interface{})
 	iter := session.DB(*dbName).C(*collName).Find(query).Iter()
-	start := time.Now()
 	// fmt.Println("Start Indexing MongoDb")
+	tracer.Trace("Start Indexing MongoDb")
 	requests := make(chan elastic.BulkableRequest)
 	// spawn workers
 	for i := 0; i < *numWorkers; i++ {
 		go doService(i, *esUri, *indexName, *typeName, requests)
 	}
-	// spawn observer
-	go peekProgress()
+	start := time.Now()
+
 	for iter.Next(&p) {
 		var esBody = make(map[string]interface{})
 		for k, v := range rawMapping {
@@ -160,7 +151,6 @@ func main() {
 	close(requests)
 	iter.Close()
 	wg.Wait()
-	close(ProgressQueue)
 	elapsed := time.Since(start)
-	fmt.Printf("\n Finished indexing documents in", elapsed)
+	tracer.Trace("Documents Indexed in ", elapsed)
 }
