@@ -16,6 +16,37 @@ func fatal(e error) {
 	flag.PrintDefaults()
 }
 
+type Oplog struct {
+	Ts bson.MongoTimestamp    `bson:"ts"`
+	Ns string                 `bson:"ns"`
+	O2 map[string]interface{} `bson:"o2"`
+	O  map[string]interface{} `bson:"o"`
+	Op string                 `bson:"op"`
+}
+
+func oplogWorkers(esUri string, requests <-chan Oplog) {
+	client, err := elastic.NewClient(elastic.SetURL(esUri))
+	if err != nil {
+		return
+	}
+
+	bulkService := elastic.NewBulkService(client).Index(indexName).Type(typeName)
+	// counts := 0
+	for v := range requests {
+		bulkService.Add(v)
+		if bulkService.NumberOfActions() == 1000 {
+			bulkResponse, _ := bulkService.Do()
+			ProgressQueue <- len(bulkResponse.Indexed())
+		}
+	}
+	// requests closed
+	if bulkService.NumberOfActions() > 0 {
+		bulkResponse, _ := bulkService.Do()
+		ProgressQueue <- len(bulkResponse.Indexed())
+
+	}
+}
+
 func main() {
 	// var dbName = flag.String("db", "", "Mongodb DB Name")
 	// var collName = flag.String("collection", "", "Mongodb Collection Name")
@@ -61,18 +92,18 @@ func main() {
 		return
 	}
 	defer session.Close()
-	p := make(map[string]interface{})
 	collection := session.DB("local").C("oplog.rs")
 	fmt.Println("Start Tailing MongoDb")
-	var lastId bson.MongoTimestamp = 1479314861
+	var lastId bson.MongoTimestamp = bson.MongoTimestamp(time.Now().Unix())
 	lastId <<= 32
 	lastId |= 1
 	fmt.Println(lastId)
-	iter := collection.Find(bson.M{"ts": bson.M{"$gt": lastId}}).Tail(5 * time.Second)
+	var p Oplog
+	iter := collection.Find(bson.M{"ns": "scaleable_dev.tbljobs", "ts": bson.M{"$gt": lastId}}).Tail(5 * time.Second)
 	for {
 		for iter.Next(&p) {
-			lastId = p["ts"].(bson.MongoTimestamp)
-			fmt.Println(lastId)
+			lastId = p.Ts
+			fmt.Println(p.Ts, p.O2, p.Op)
 		}
 		if iter.Err() != nil {
 			fmt.Println("got error")
@@ -81,7 +112,7 @@ func main() {
 		if iter.Timeout() {
 			continue
 		}
-		query := collection.Find(bson.M{"ts": bson.M{"$gt": lastId}})
+		query := collection.Find(bson.M{"ns": "scaleable_dev.tbljobs", "ts": bson.M{"$gt": lastId}})
 		iter = query.Tail(5 * time.Second)
 	}
 	iter.Close()
