@@ -8,7 +8,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	elastic "gopkg.in/olivere/elastic.v3"
 	// "log"
-	"mongoes/libs"
+	"github.com/AdhityaRamadhanus/mongoes"
 	"os"
 	// "runtime"
 	"sync"
@@ -76,14 +76,14 @@ func main() {
 	var query map[string]interface{}
 	if len(*queryFile) > 0 {
 		var queryerr error
-		query, queryerr = libs.ReadJson(*queryFile)
+		query, queryerr = mongoes.ReadJson(*queryFile)
 		if queryerr != nil {
 			fmt.Println(queryerr)
 		}
 	}
 
 	// Set Tracer
-	tracer := libs.NewTracer(os.Stdout)
+	tracer := mongoes.NewTracer(os.Stdout)
 
 	// Get connected to mongodb
 	tracer.Trace("Connecting to Mongodb at", *dbUri)
@@ -107,12 +107,12 @@ func main() {
 		return
 	}
 	tracer.Trace("Create Mongodb to ES Mapping")
-	rawMapping, err := libs.ReadJson(*mappingFile)
+	rawMapping, err := mongoes.ReadJson(*mappingFile)
 	if err != nil {
 		fatal(err)
 		return
 	}
-	esMapping, _ := libs.CreateMapping(rawMapping)
+	esMapping, _ := mongoes.CreateMapping(rawMapping)
 	_, err = client.PutMapping().Index(*indexName).Type(*typeName).BodyJson(esMapping).Do()
 	if err != nil {
 		fatal(err)
@@ -120,7 +120,6 @@ func main() {
 	}
 	p := make(map[string]interface{})
 	iter := session.DB(*dbName).C(*collName).Find(query).Iter()
-	// fmt.Println("Start Indexing MongoDb")
 	tracer.Trace("Start Indexing MongoDb")
 	requests := make(chan elastic.BulkableRequest)
 	// spawn workers

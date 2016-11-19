@@ -4,9 +4,9 @@ import (
 	// "errors"
 	"flag"
 	"fmt"
+	"github.com/AdhityaRamadhanus/mongoes"
 	mongo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"mongoes/libs"
 	"os"
 	"time"
 )
@@ -16,36 +16,28 @@ func fatal(e error) {
 	flag.PrintDefaults()
 }
 
-type Oplog struct {
-	Ts bson.MongoTimestamp    `bson:"ts"`
-	Ns string                 `bson:"ns"`
-	O2 map[string]interface{} `bson:"o2"`
-	O  map[string]interface{} `bson:"o"`
-	Op string                 `bson:"op"`
-}
+// func oplogWorkers(esUri string, requests <-chan mongoes.Oplog) {
+// 	client, err := elastic.NewClient(elastic.SetURL(esUri))
+// 	if err != nil {
+// 		return
+// 	}
 
-func oplogWorkers(esUri string, requests <-chan Oplog) {
-	client, err := elastic.NewClient(elastic.SetURL(esUri))
-	if err != nil {
-		return
-	}
+// 	bulkService := elastic.NewBulkService(client).Index(indexName).Type(typeName)
+// 	// counts := 0
+// 	for v := range requests {
+// 		bulkService.Add(v)
+// 		if bulkService.NumberOfActions() == 1000 {
+// 			bulkResponse, _ := bulkService.Do()
+// 			ProgressQueue <- len(bulkResponse.Indexed())
+// 		}
+// 	}
+// 	// requests closed
+// 	if bulkService.NumberOfActions() > 0 {
+// 		bulkResponse, _ := bulkService.Do()
+// 		ProgressQueue <- len(bulkResponse.Indexed())
 
-	bulkService := elastic.NewBulkService(client).Index(indexName).Type(typeName)
-	// counts := 0
-	for v := range requests {
-		bulkService.Add(v)
-		if bulkService.NumberOfActions() == 1000 {
-			bulkResponse, _ := bulkService.Do()
-			ProgressQueue <- len(bulkResponse.Indexed())
-		}
-	}
-	// requests closed
-	if bulkService.NumberOfActions() > 0 {
-		bulkResponse, _ := bulkService.Do()
-		ProgressQueue <- len(bulkResponse.Indexed())
-
-	}
-}
+// 	}
+// }
 
 func main() {
 	// var dbName = flag.String("db", "", "Mongodb DB Name")
@@ -75,14 +67,14 @@ func main() {
 	// var query map[string]interface{}
 	// if len(*queryFile) > 0 {
 	// 	var queryerr error
-	// 	query, queryerr = libs.ReadJson(*queryFile)
+	// 	query, queryerr = mongoes.ReadJson(*queryFile)
 	// 	if queryerr != nil {
 	// 		fmt.Println(queryerr)
 	// 	}
 	// }
 
 	// Set Tracer
-	tracer := libs.NewTracer(os.Stdout)
+	tracer := mongoes.NewTracer(os.Stdout)
 
 	// Get connected to mongodb
 	tracer.Trace("Connecting to Mongodb at", *dbUri)
@@ -98,7 +90,7 @@ func main() {
 	lastId <<= 32
 	lastId |= 1
 	fmt.Println(lastId)
-	var p Oplog
+	var p mongoes.Oplog
 	iter := collection.Find(bson.M{"ns": "scaleable_dev.tbljobs", "ts": bson.M{"$gt": lastId}}).Tail(5 * time.Second)
 	for {
 		for iter.Next(&p) {
