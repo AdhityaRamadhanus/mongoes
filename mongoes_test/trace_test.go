@@ -1,4 +1,4 @@
-package mongoes
+package mongoes_test
 
 import (
 	"bytes"

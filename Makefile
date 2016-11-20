@@ -2,7 +2,7 @@
 .PHONY: test
 
 # Flags #
-GO_FLAGS = -race -o
+GO_FLAGS = -o
 
 # Path configuration #
 GONDEX_DIR = gondex
@@ -13,7 +13,7 @@ TEST_PKG = github.com/AdhityaRamadhanus/mongoes/mongoes_test
 
 # target #
 
-default: test clean build_gowatch build_gondex
+default: test clean build_gondex
 
 build_gowatch: $(GOWATCH_DIR)/main.go
 	cd $(GOWATCH_DIR); \
@@ -28,9 +28,9 @@ build_gondex: $(GONDEX_DIR)/main.go
 
 clean:
 	rm -rf $(GONDEX_DIR)/*.exe
-	rm -rf $(GONDEX_DIR)/$(BIN_DIR)/*.exe
+	rm -rf $(GONDEX_DIR)/$(BIN_DIR)
 	rm -rf $(GOWATCH_DIR)/*.exe
-	rm -rf $(GOWATCH_DIR)/$(BIN_DIR)/*.exe
+	rm -rf $(GOWATCH_DIR)/$(BIN_DIR)
 
 test:
 	go test $(TEST_PKG)

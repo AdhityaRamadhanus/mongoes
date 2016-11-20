@@ -41,6 +41,8 @@ gondex --db=<dbname> --collection=<collectioname> --index=<indexname> --type=<ty
 	}
 }
 ```
+![Graphql](media/gondes1.png)
+![Graphql](media/gondes2.png)
 
 Gowatch 
 ------------

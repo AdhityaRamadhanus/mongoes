@@ -1,4 +1,4 @@
-package gondex
+package main
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 	"os"
 	// "runtime"
 	"sync"
-	// "sync/atomic"
+	"sync/atomic"
 	"time"
 )
 
@@ -22,6 +22,15 @@ func fatal(e error) {
 }
 
 var wg sync.WaitGroup
+var counts int32 = 0
+var ProgressQueue = make(chan int)
+
+func peekProgress() {
+	for amounts := range ProgressQueue {
+		atomic.AddInt32(&counts, int32(amounts))
+		fmt.Println(atomic.LoadInt32(&counts), " Indexed")
+	}
+}
 
 func doService(id int, esUri, indexName, typeName string, requests <-chan elastic.BulkableRequest) {
 	defer wg.Done()
@@ -29,21 +38,24 @@ func doService(id int, esUri, indexName, typeName string, requests <-chan elasti
 	if err != nil {
 		return
 	}
-	counts := 0
+	// counts := 0
 	bulkService := elastic.NewBulkService(client).Index(indexName).Type(typeName)
 	for v := range requests {
 		bulkService.Add(v)
 		if bulkService.NumberOfActions() == 1000 {
 			bulkResponse, _ := bulkService.Do()
-			counts += len(bulkResponse.Indexed())
+			// counts.atomicAdd(&counts, int32(len(bulkResponse.Indexed())))
+			ProgressQueue <- len(bulkResponse.Indexed())
 		}
 	}
 	// requests closed
 	if bulkService.NumberOfActions() > 0 {
 		bulkResponse, _ := bulkService.Do()
-		counts += len(bulkResponse.Indexed())
+		ProgressQueue <- len(bulkResponse.Indexed())
+
+		// counts += len(bulkResponse.Indexed())
 	}
-	fmt.Println("Worker ", id, "finished indexing ", counts, "documents")
+	// fmt.Println("Worker ", id, "finished indexing ", counts, "documents")
 }
 
 func main() {
@@ -126,6 +138,7 @@ func main() {
 	for i := 0; i < *numWorkers; i++ {
 		go doService(i, *esUri, *indexName, *typeName, requests)
 	}
+	go peekProgress()
 	start := time.Now()
 
 	for iter.Next(&p) {
@@ -151,5 +164,6 @@ func main() {
 	iter.Close()
 	wg.Wait()
 	elapsed := time.Since(start)
+	close(ProgressQueue)
 	tracer.Trace("Documents Indexed in ", elapsed)
 }
