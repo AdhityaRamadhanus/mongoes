@@ -5,9 +5,11 @@ import (
 	"io/ioutil"
 )
 
+// JSON Shortcut type
 type JSON map[string]interface{}
 
-func ReadJson(filename string) (JSON, error) {
+// ReadJSON read json file and return JSON
+func ReadJSON(filename string) (JSON, error) {
 	res, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err

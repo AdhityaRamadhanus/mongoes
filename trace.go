@@ -5,6 +5,7 @@ import (
 	"io"
 )
 
+// Tracer / logger
 type Tracer interface {
 	Trace(...interface{})
 }
@@ -22,10 +23,12 @@ func (t *tracer) Trace(a ...interface{}) {
 
 func (t *niltracer) Trace(a ...interface{}) {}
 
+// NewTracer return normal tracer
 func NewTracer(w io.Writer) Tracer {
 	return &tracer{writer: w}
 }
 
+// OffTracer return tracer that do nothing
 func OffTracer() Tracer {
 	return &niltracer{}
 }

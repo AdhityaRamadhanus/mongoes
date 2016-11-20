@@ -4,6 +4,7 @@ import (
 	"strings"
 )
 
+// CreateMapping create Elastic Search Mapping from mongodb collection
 func CreateMapping(doc JSON) (JSON, error) {
 	mapping := JSON{
 		"properties": JSON{},

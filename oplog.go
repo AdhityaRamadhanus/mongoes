@@ -2,6 +2,7 @@ package mongoes
 
 import "gopkg.in/mgo.v2/bson"
 
+// Oplog or Operation log struct
 type Oplog struct {
 	Ts bson.MongoTimestamp    `bson:"ts"`
 	Ns string                 `bson:"ns"`
