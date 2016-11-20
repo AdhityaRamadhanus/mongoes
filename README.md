@@ -1,4 +1,6 @@
 # MONGOES
+[![Go Report Card](https://goreportcard.com/badge/github.com/AdhityaRamadhanus/mongoes)](https://goreportcard.com/report/github.com/AdhityaRamadhanus/mongoes)
+
 Set of commandline tools to synchronize mongodb documents and elasticsearch index
 
 <p>
