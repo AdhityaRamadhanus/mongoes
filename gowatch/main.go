@@ -25,7 +25,7 @@ func main() {
 	var typeName = flag.String("type", "", "ES Type Name")
 	// var mappingFile = flag.String("mapping", "", "Mapping mongodb field to es")
 	// var queryFile = flag.String("filter", "", "Query to filter mongodb docs")
-	// var esUri = flag.String("--esUri", "http://localhost:9200", "Elasticsearch URI")
+	var esUri = flag.String("--esUri", "http://localhost:9200", "Elasticsearch URI")
 
 	flag.Parse()
 
@@ -54,6 +54,28 @@ func main() {
 	// Set Tracer
 	tracer := mongoes.NewTracer(os.Stdout)
 
+	// Get elastic search mapping
+	// esMapping := make(map[string]interface{})
+	tracer.Trace("Connecting to elasticsearch cluster")
+	client, err := elastic.NewClient(elastic.SetURL(*esUri))
+	if err != nil {
+		fatal(err)
+		return
+	}
+
+	rawMapping, err := client.GetMapping().Index(*indexName).Type(*typeName).Pretty(true).Do()
+	if err != nil {
+		fatal(err)
+		return
+	}
+	jsonPath := *indexName + ".mappings." + *typeName + ".properties"
+	esMapping := mongoes.GetDeepObject(rawMapping, jsonPath)
+	selectedField := make([]string, 1)
+	for key, _ := range esMapping {
+		selectedField = append(selectedField, key)
+	}
+	fmt.Println(selectedField)
+
 	// Get connected to mongodb
 	tracer.Trace("Connecting to Mongodb at", *dbUri)
 	session, err := mongo.Dial(*dbUri)
@@ -69,11 +91,27 @@ func main() {
 	lastId |= 1
 	fmt.Println(lastId)
 	var p mongoes.Oplog
-	iter := collection.Find(bson.M{"ns": "scaleable_dev.tbljobs", "ts": bson.M{"$gt": lastId}}).Tail(5 * time.Second)
+	var nstring = *dbName + "." + *collName
+	iter := collection.Find(bson.M{"ns": nstring, "ts": bson.M{"$gt": lastId}}).Tail(5 * time.Second)
+	indexService := elastic.NewIndexService(client).Index(*indexName).Type(*typeName)
 	for {
 		for iter.Next(&p) {
 			lastId = p.Ts
 			fmt.Println(p.Ts, p.O2, p.Op)
+			// process operations
+			if p.Op == "i" {
+				indexRequest := map[string]interface{}{}
+				for _, v := range selectedField {
+					indexRequest[v] = p.O[v]
+				}
+				fmt.Println(indexRequest)
+				stringId := p.O["_id"].(bson.ObjectId).Hex()
+				fmt.Println(stringId)
+				if _, err := indexService.Id(stringId).BodyJson(indexRequest).Do(); err != nil {
+					fmt.Println("Successfully indexed")
+				}
+
+			}
 		}
 		if iter.Err() != nil {
 			fmt.Println("got error")
@@ -82,7 +120,7 @@ func main() {
 		if iter.Timeout() {
 			continue
 		}
-		query := collection.Find(bson.M{"ns": "scaleable_dev.tbljobs", "ts": bson.M{"$gt": lastId}})
+		query := collection.Find(bson.M{"ns": nstring, "ts": bson.M{"$gt": lastId}})
 		iter = query.Tail(5 * time.Second)
 	}
 	iter.Close()
