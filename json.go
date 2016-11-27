@@ -28,7 +28,7 @@ func GetDeepObject(obj map[string]interface{}, path string) JSON {
 	ret := obj
 	splitted := strings.Split(path, ".")
 	for _, v := range splitted {
-		fmt.Println(v)
+		// fmt.Println(v)
 		ret = ret[v].(map[string]interface{})
 	}
 	return ret
