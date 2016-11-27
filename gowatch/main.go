@@ -23,8 +23,6 @@ func main() {
 	var dbUri = flag.String("dbUri", "localhost:27017", "Mongodb URI")
 	var indexName = flag.String("index", "", "ES Index Name")
 	var typeName = flag.String("type", "", "ES Type Name")
-	// var mappingFile = flag.String("mapping", "", "Mapping mongodb field to es")
-	// var queryFile = flag.String("filter", "", "Query to filter mongodb docs")
 	var esUri = flag.String("--esUri", "http://localhost:9200", "Elasticsearch URI")
 
 	flag.Parse()
@@ -41,15 +39,6 @@ func main() {
 	if len(*typeName) == 0 {
 		typeName = collName
 	}
-
-	// var query map[string]interface{}
-	// if len(*queryFile) > 0 {
-	// 	var queryerr error
-	// 	query, queryerr = mongoes.ReadJson(*queryFile)
-	// 	if queryerr != nil {
-	// 		fmt.Println(queryerr)
-	// 	}
-	// }
 
 	// Set Tracer
 	tracer := mongoes.NewTracer(os.Stdout)
@@ -74,7 +63,6 @@ func main() {
 	for key, _ := range esMapping {
 		selectedField = append(selectedField, key)
 	}
-	fmt.Println(selectedField)
 
 	// Get connected to mongodb
 	tracer.Trace("Connecting to Mongodb at", *dbUri)
@@ -98,7 +86,7 @@ func main() {
 	for {
 		for iter.Next(&p) {
 			lastId = p.Ts
-			fmt.Println(p.Ts, p.O2, p.Op)
+			// fmt.Println(p.Ts, p.O2, p.Op)
 			// process operations
 			if p.Op == "i" || p.Op == "u" {
 				indexRequest := map[string]interface{}{}
@@ -107,9 +95,7 @@ func main() {
 						indexRequest[v] = p.O[v]
 					}
 				}
-				fmt.Println(indexRequest)
 				stringId := p.O["_id"].(bson.ObjectId).Hex()
-				fmt.Println(stringId)
 				if _, err := indexService.Id(stringId).BodyJson(indexRequest).Do(); err == nil {
 					fmt.Println("Successfully indexed")
 				}
