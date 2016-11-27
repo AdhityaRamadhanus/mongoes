@@ -94,23 +94,31 @@ func main() {
 	var nstring = *dbName + "." + *collName
 	iter := collection.Find(bson.M{"ns": nstring, "ts": bson.M{"$gt": lastId}}).Tail(5 * time.Second)
 	indexService := elastic.NewIndexService(client).Index(*indexName).Type(*typeName)
+	deleteService := elastic.NewDeleteService(client).Index(*indexName).Type(*typeName)
 	for {
 		for iter.Next(&p) {
 			lastId = p.Ts
 			fmt.Println(p.Ts, p.O2, p.Op)
 			// process operations
-			if p.Op == "i" {
+			if p.Op == "i" || p.Op == "u" {
 				indexRequest := map[string]interface{}{}
 				for _, v := range selectedField {
-					indexRequest[v] = p.O[v]
+					if p.O[v] != nil {
+						indexRequest[v] = p.O[v]
+					}
 				}
 				fmt.Println(indexRequest)
 				stringId := p.O["_id"].(bson.ObjectId).Hex()
 				fmt.Println(stringId)
-				if _, err := indexService.Id(stringId).BodyJson(indexRequest).Do(); err != nil {
+				if _, err := indexService.Id(stringId).BodyJson(indexRequest).Do(); err == nil {
 					fmt.Println("Successfully indexed")
 				}
-
+			} else if p.Op == "d" {
+				deleteRequestId := p.O["_id"].(bson.ObjectId).Hex()
+				fmt.Println(deleteRequestId)
+				if _, err := deleteService.Id(deleteRequestId).Do(); err == nil {
+					fmt.Println("Successfully deleted")
+				}
 			}
 		}
 		if iter.Err() != nil {
