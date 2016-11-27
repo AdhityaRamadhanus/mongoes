@@ -88,7 +88,7 @@ func main() {
 	var query map[string]interface{}
 	if len(*queryFile) > 0 {
 		var queryerr error
-		query, queryerr = mongoes.ReadJson(*queryFile)
+		query, queryerr = mongoes.ReadJSON(*queryFile)
 		if queryerr != nil {
 			fmt.Println(queryerr)
 		}
@@ -119,7 +119,7 @@ func main() {
 		return
 	}
 	tracer.Trace("Create Mongodb to ES Mapping")
-	rawMapping, err := mongoes.ReadJson(*mappingFile)
+	rawMapping, err := mongoes.ReadJSON(*mappingFile)
 	if err != nil {
 		fatal(err)
 		return

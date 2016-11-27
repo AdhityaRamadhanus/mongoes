@@ -13,7 +13,7 @@ TEST_PKG = github.com/AdhityaRamadhanus/mongoes/mongoes_test
 
 # target #
 
-default: test clean build_gondex
+default: test clean build_gondex build_gowatch
 
 build_gowatch: $(GOWATCH_DIR)/main.go
 	cd $(GOWATCH_DIR); \

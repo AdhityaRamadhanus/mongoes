@@ -1,12 +1,13 @@
 package main
 
 import (
-	// "errors"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/AdhityaRamadhanus/mongoes"
 	mongo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	elastic "gopkg.in/olivere/elastic.v3"
 	"os"
 	"time"
 )
@@ -16,53 +17,30 @@ func fatal(e error) {
 	flag.PrintDefaults()
 }
 
-// func oplogWorkers(esUri string, requests <-chan mongoes.Oplog) {
-// 	client, err := elastic.NewClient(elastic.SetURL(esUri))
-// 	if err != nil {
-// 		return
-// 	}
-
-// 	bulkService := elastic.NewBulkService(client).Index(indexName).Type(typeName)
-// 	// counts := 0
-// 	for v := range requests {
-// 		bulkService.Add(v)
-// 		if bulkService.NumberOfActions() == 1000 {
-// 			bulkResponse, _ := bulkService.Do()
-// 			ProgressQueue <- len(bulkResponse.Indexed())
-// 		}
-// 	}
-// 	// requests closed
-// 	if bulkService.NumberOfActions() > 0 {
-// 		bulkResponse, _ := bulkService.Do()
-// 		ProgressQueue <- len(bulkResponse.Indexed())
-
-// 	}
-// }
-
 func main() {
-	// var dbName = flag.String("db", "", "Mongodb DB Name")
-	// var collName = flag.String("collection", "", "Mongodb Collection Name")
+	var dbName = flag.String("db", "", "Mongodb DB Name")
+	var collName = flag.String("collection", "", "Mongodb Collection Name")
 	var dbUri = flag.String("dbUri", "localhost:27017", "Mongodb URI")
-	// var indexName = flag.String("index", "", "ES Index Name")
-	// var typeName = flag.String("type", "", "ES Type Name")
+	var indexName = flag.String("index", "", "ES Index Name")
+	var typeName = flag.String("type", "", "ES Type Name")
 	// var mappingFile = flag.String("mapping", "", "Mapping mongodb field to es")
 	// var queryFile = flag.String("filter", "", "Query to filter mongodb docs")
 	// var esUri = flag.String("--esUri", "http://localhost:9200", "Elasticsearch URI")
 
 	flag.Parse()
 
-	// if len(*dbName) == 0 || len(*collName) == 0 {
-	// 	fatal(errors.New("Please provide db and collection name"))
-	// 	return
-	// }
+	if len(*dbName) == 0 || len(*collName) == 0 {
+		fatal(errors.New("Please provide db and collection name"))
+		return
+	}
 
-	// if len(*indexName) == 0 {
-	// 	indexName = dbName
-	// }
+	if len(*indexName) == 0 {
+		indexName = dbName
+	}
 
-	// if len(*typeName) == 0 {
-	// 	typeName = collName
-	// }
+	if len(*typeName) == 0 {
+		typeName = collName
+	}
 
 	// var query map[string]interface{}
 	// if len(*queryFile) > 0 {
