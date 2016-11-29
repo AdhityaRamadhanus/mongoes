@@ -1,13 +1,14 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"github.com/AdhityaRamadhanus/mongoes"
 	mongo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	elastic "gopkg.in/olivere/elastic.v3"
+	elastic "gopkg.in/olivere/elastic.v5"
 	"os"
 	"time"
 )
@@ -30,13 +31,13 @@ func processOplog(client *elastic.Client, indexName, typeName string, selectedFi
 				}
 			}
 			stringId := p.O["_id"].(bson.ObjectId).Hex()
-			if _, err := indexService.Id(stringId).BodyJson(indexRequest).Do(); err == nil {
+			if _, err := indexService.Id(stringId).BodyJson(indexRequest).Do(context.Background()); err == nil {
 				fmt.Println("Successfully indexed")
 			}
 		} else if p.Op == "d" {
 			deleteRequestId := p.O["_id"].(bson.ObjectId).Hex()
 			fmt.Println(deleteRequestId)
-			if _, err := deleteService.Id(deleteRequestId).Do(); err == nil {
+			if _, err := deleteService.Id(deleteRequestId).Do(context.Background()); err == nil {
 				fmt.Println("Successfully deleted")
 			}
 		}
@@ -49,7 +50,7 @@ func main() {
 	var dbUri = flag.String("dbUri", "localhost:27017", "Mongodb URI")
 	var indexName = flag.String("index", "", "ES Index Name")
 	var typeName = flag.String("type", "", "ES Type Name")
-	var esUri = flag.String("--esUri", "http://localhost:9200", "Elasticsearch URI")
+	var esUri = flag.String("esUri", "http://localhost:9200", "Elasticsearch URI")
 
 	flag.Parse()
 
@@ -70,7 +71,6 @@ func main() {
 	tracer := mongoes.NewTracer(os.Stdout)
 
 	// Get elastic search mapping
-	// esMapping := make(map[string]interface{})
 	tracer.Trace("Connecting to elasticsearch cluster")
 	client, err := elastic.NewClient(elastic.SetURL(*esUri))
 	if err != nil {
@@ -78,7 +78,7 @@ func main() {
 		return
 	}
 
-	rawMapping, err := client.GetMapping().Index(*indexName).Type(*typeName).Pretty(true).Do()
+	rawMapping, err := client.GetMapping().Index(*indexName).Type(*typeName).Pretty(true).Do(context.Background())
 	if err != nil {
 		fatal(err)
 		return
@@ -103,7 +103,6 @@ func main() {
 	var lastId bson.MongoTimestamp = bson.MongoTimestamp(time.Now().Unix())
 	lastId <<= 32
 	lastId |= 1
-	fmt.Println(lastId)
 	var p mongoes.Oplog
 	var nstring = *dbName + "." + *collName
 	iter := collection.Find(bson.M{"ns": nstring, "ts": bson.M{"$gt": lastId}}).Tail(5 * time.Second)

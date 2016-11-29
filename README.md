@@ -4,6 +4,7 @@
 Set of commandline tools to synchronize mongodb documents and elasticsearch index
 
 <p>
+  <a href="#Installation">Installation</a>
   <a href="#Gondex">Gondex</a> |
   <a href="#Gowatch">Gowatch</a> |
   <a href="#licenses">License</a>
@@ -12,6 +13,12 @@ Set of commandline tools to synchronize mongodb documents and elasticsearch inde
 	Set of commandline tools to synchronize mongodb documents and elasticsearch index
   </blockquote>
 </p>
+
+Installation
+------------
+* git clone
+* go get
+* make
 
 Gondex
 ------------
@@ -48,8 +55,20 @@ gondex --db=<dbname> --collection=<collectioname> --index=<indexname> --type=<ty
 
 Gowatch 
 ------------
-* Synchronize your mongodb collection with elasticsearch index using mongodb replicaset oplog (operation log)
-* SOON
+* Synchronize your mongodb collection with elasticsearch index using mongodb replicaset oplog (insert update delete log)
+
+Usage
+------------
+```
+gowatch --db=<dbname> --collection=<collectioname> --index=<indexname> --type=<typename> --dbUri=<MongoURI> --esUri=<elasticsearchURI>
+```
+* db, Your Mongodb DB name
+* collection, Your mongodb collection name
+* index, Preferred elasticsearch index name (db name will be used if you leave this empty)
+* type, Preferred elasticsearch type name (collection name will be used if you leave this empty)
+* dbUri, MongoDB URI
+* esUri, Elasticsearch URI
+* Index and type assumed already have its own mapping, basically gowatch will take field on mongodb documents based on elastic search mapping
 
 License
 ----
