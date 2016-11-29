@@ -99,38 +99,23 @@ func main() {
 	tracer := mongoes.NewTracer(os.Stdout)
 
 	// Get connected to mongodb
-	tracer.Trace("Connecting to Mongodb at", *dbUri)
+	tracer.Trace("Connecting to Mongodb at ", *dbUri)
 	session, err := mongo.Dial(*dbUri)
 	if err != nil {
 		fatal(err)
 		return
 	}
 	defer session.Close()
-
-	tracer.Trace("Connecting to elasticsearch cluster")
-	client, err := elastic.NewClient(elastic.SetURL(*esUri))
-	if err != nil {
-		fatal(err)
-		return
-	}
-	client.DeleteIndex(*indexName).Do(context.Background())
-	_, err = client.CreateIndex(*indexName).Do(context.Background())
-	if err != nil {
-		fatal(err)
-		return
-	}
-	tracer.Trace("Create Mongodb to ES Mapping")
 	rawMapping, err := mongoes.ReadJSON(*mappingFile)
 	if err != nil {
 		fatal(err)
 		return
 	}
-	esMapping, _ := mongoes.CreateMapping(rawMapping)
-	_, err = client.PutMapping().Index(*indexName).Type(*typeName).BodyJson(esMapping).Do(context.Background())
-	if err != nil {
+	if err := mongoes.SetupIndexAndMapping(*esUri, *indexName, *typeName, rawMapping, tracer); err != nil {
 		fatal(err)
 		return
 	}
+
 	p := make(map[string]interface{})
 	iter := session.DB(*dbName).C(*collName).Find(query).Iter()
 	tracer.Trace("Start Indexing MongoDb")
