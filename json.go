@@ -23,6 +23,7 @@ func ReadJSON(filename string) (JSON, error) {
 	return mapping, nil
 }
 
+// GetDeepObject return object within JSON object
 func GetDeepObject(obj map[string]interface{}, path string) JSON {
 	ret := obj
 	splitted := strings.Split(path, ".")
