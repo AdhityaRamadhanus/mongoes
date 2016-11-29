@@ -6,11 +6,12 @@ import (
 	"fmt"
 	mongo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	elastic "gopkg.in/olivere/elastic.v3"
+	elastic "gopkg.in/olivere/elastic.v5"
 	// "log"
 	"github.com/AdhityaRamadhanus/mongoes"
 	"os"
 	// "runtime"
+	"context"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -43,14 +44,14 @@ func doService(id int, esUri, indexName, typeName string, requests <-chan elasti
 	for v := range requests {
 		bulkService.Add(v)
 		if bulkService.NumberOfActions() == 1000 {
-			bulkResponse, _ := bulkService.Do()
+			bulkResponse, _ := bulkService.Do(context.Background())
 			// counts.atomicAdd(&counts, int32(len(bulkResponse.Indexed())))
 			ProgressQueue <- len(bulkResponse.Indexed())
 		}
 	}
 	// requests closed
 	if bulkService.NumberOfActions() > 0 {
-		bulkResponse, _ := bulkService.Do()
+		bulkResponse, _ := bulkService.Do(context.Background())
 		ProgressQueue <- len(bulkResponse.Indexed())
 
 		// counts += len(bulkResponse.Indexed())
@@ -112,8 +113,8 @@ func main() {
 		fatal(err)
 		return
 	}
-	client.DeleteIndex(*indexName).Do()
-	_, err = client.CreateIndex(*indexName).Do()
+	client.DeleteIndex(*indexName).Do(context.Background())
+	_, err = client.CreateIndex(*indexName).Do(context.Background())
 	if err != nil {
 		fatal(err)
 		return
@@ -125,7 +126,7 @@ func main() {
 		return
 	}
 	esMapping, _ := mongoes.CreateMapping(rawMapping)
-	_, err = client.PutMapping().Index(*indexName).Type(*typeName).BodyJson(esMapping).Do()
+	_, err = client.PutMapping().Index(*indexName).Type(*typeName).BodyJson(esMapping).Do(context.Background())
 	if err != nil {
 		fatal(err)
 		return

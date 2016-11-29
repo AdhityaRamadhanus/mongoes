@@ -2,7 +2,6 @@ package mongoes
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"strings"
 )
