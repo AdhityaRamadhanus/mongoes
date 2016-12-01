@@ -30,8 +30,9 @@ func CreateMapping(doc JSON) (JSON, error) {
 	return mapping, nil
 }
 
-func SetupIndexAndMapping(esUri, indexName, typeName string, rawMapping map[string]interface{}, tracer Tracer) error {
-	client, err := elastic.NewClient(elastic.SetURL(esUri))
+// SetupIndexAndMapping will Delete Index and Create new Mapping
+func SetupIndexAndMapping(esURI, indexName, typeName string, rawMapping map[string]interface{}, tracer Tracer) error {
+	client, err := elastic.NewClient(elastic.SetURL(esURI))
 	if err != nil {
 		return err
 	}

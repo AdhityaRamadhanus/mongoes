@@ -4,15 +4,22 @@
 Set of commandline tools to synchronize mongodb documents and elasticsearch index
 
 <p>
-  <a href="#Installation">Installation</a>
+  <a href="#ReadFirst">Read First | </a>
+  <a href="#Installation">Installation |</a>
   <a href="#Gondex">Gondex</a> |
   <a href="#Gowatch">Gowatch</a> |
   <a href="#licenses">License</a>
   <br><br>
   <blockquote>
-	Set of commandline tools to synchronize mongodb documents and elasticsearch index
+	Set of commandline tools to synchronize mongodb documents and elasticsearch index.
+	So you may already have data in mongodb and decided to put them in elasticsearch (You know, for search) or just want to re-sync mongodb with elasticsearch.
   </blockquote>
 </p>
+
+Read First
+------------
+* Everytime you run gondex, it will delete your current index in elasticsearch and create new mapping (and new index ofc)
+* These tools only work for elasticsearch v5
 
 Installation
 ------------
@@ -22,7 +29,7 @@ Installation
 
 Gondex
 ------------
-* Gondex will index your mongodb collection based on a mapping you provide
+* Gondex will index your mongodb collection to elasticsearch based on a mapping you provide
 
 Usage
 ------------

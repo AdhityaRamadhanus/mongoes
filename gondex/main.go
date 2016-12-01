@@ -86,7 +86,7 @@ func main() {
 		typeName = collName
 	}
 
-	var query map[string]interface{}
+	// var query map[string]interface{}
 	query, _ := mongoes.ReadJSON(*queryFile)
 
 	// Set Tracer
