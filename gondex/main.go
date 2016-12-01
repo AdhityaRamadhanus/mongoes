@@ -87,13 +87,7 @@ func main() {
 	}
 
 	var query map[string]interface{}
-	if len(*queryFile) > 0 {
-		var queryerr error
-		query, queryerr = mongoes.ReadJSON(*queryFile)
-		if queryerr != nil {
-			fmt.Println(queryerr)
-		}
-	}
+	query, _ := mongoes.ReadJSON(*queryFile)
 
 	// Set Tracer
 	tracer := mongoes.NewTracer(os.Stdout)
