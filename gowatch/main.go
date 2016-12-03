@@ -18,7 +18,7 @@ func fatal(e error) {
 	flag.PrintDefaults()
 }
 
-func processOplog(client *elastic.Client, indexName, typeName string, selectedField []string, oplogs <-chan mongoes.Oplog) {
+func processOplog(client *elastic.Client, indexName, typeName string, selectedField []string, oplogs <-chan Oplog) {
 	indexService := elastic.NewIndexService(client).Index(indexName).Type(typeName)
 	deleteService := elastic.NewDeleteService(client).Index(indexName).Type(typeName)
 
@@ -103,10 +103,10 @@ func main() {
 	var lastId bson.MongoTimestamp = bson.MongoTimestamp(time.Now().Unix())
 	lastId <<= 32
 	lastId |= 1
-	var p mongoes.Oplog
+	var p Oplog
 	var nstring = *dbName + "." + *collName
 	iter := collection.Find(bson.M{"ns": nstring, "ts": bson.M{"$gt": lastId}}).Tail(5 * time.Second)
-	oplogs := make(chan mongoes.Oplog, 1000)
+	oplogs := make(chan Oplog, 1000)
 	go processOplog(client, *indexName, *typeName, selectedField, oplogs)
 	for {
 		for iter.Next(&p) {
