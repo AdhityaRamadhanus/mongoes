@@ -24,8 +24,10 @@ var (
 
 	mgo_options mongoes.MgoOptions
 
-	mgoQuery  map[string]interface{}
-	esMapping map[string]interface{}
+	mgoQuery   map[string]interface{}
+	esMapping  map[string]interface{}
+	configName = flag.String("config", "", "config file")
+	pathConfig = flag.String("path", ".", "config path")
 
 	// Done channel signal, main goroutines should exit
 	Done = make(chan struct{})
@@ -33,6 +35,7 @@ var (
 
 func fatal(e error) {
 	fmt.Println(e)
+	fmt.Println("For More information see https://github.com/AdhityaRamadhanus/mongoes/blob/master/README.md")
 	flag.PrintDefaults()
 }
 
@@ -45,13 +48,18 @@ func peekProgress() {
 }
 
 func init() {
-	viper.SetConfigName("config")
-	viper.AddConfigPath(".")
+	flag.Parse()
+	if len(*configName) == 0 {
+		fatal(errors.New("Please provide config file and config path"))
+		os.Exit(1)
+	}
+	viper.SetConfigName(*configName)
+	viper.AddConfigPath(*pathConfig)
 
 	err := viper.ReadInConfig()
 	if err != nil {
 		fatal(err)
-		return
+		os.Exit(1)
 	}
 	mgo_options.Mgo_dbname = viper.GetString("mongodb.database")
 	mgo_options.Mgo_collname = viper.GetString("mongodb.collection")
