@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	// "context"
 	"flag"
 	"fmt"
 	"github.com/AdhityaRamadhanus/mongoes"
@@ -10,13 +10,13 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	elastic "gopkg.in/olivere/elastic.v5"
 	"os"
-	"sync"
+	// "sync"
+	"runtime"
 	"sync/atomic"
 	"time"
 )
 
 var (
-	wg            sync.WaitGroup
 	counts        int32 = 0
 	ProgressQueue       = make(chan int)
 
@@ -26,6 +26,9 @@ var (
 
 	mgoQuery  map[string]interface{}
 	esMapping map[string]interface{}
+
+	// Done channel signal, main goroutines should exit
+	Done = make(chan struct{})
 )
 
 func fatal(e error) {
@@ -38,26 +41,7 @@ func peekProgress() {
 		atomic.AddInt32(&counts, int32(amounts))
 		fmt.Println(atomic.LoadInt32(&counts), " Indexed")
 	}
-}
-
-func doService(id int, es_options mongoes.ESOptions, requests <-chan elastic.BulkableRequest) {
-	defer wg.Done()
-	client, err := elastic.NewClient(elastic.SetURL(es_options.ES_URI))
-	if err != nil {
-		return
-	}
-	bulkService := elastic.NewBulkService(client).Index(es_options.ES_index).Type(es_options.ES_type)
-	for v := range requests {
-		bulkService.Add(v)
-		if bulkService.NumberOfActions() == 1000 {
-			bulkResponse, _ := bulkService.Do(context.Background())
-			ProgressQueue <- len(bulkResponse.Indexed())
-		}
-	}
-	if bulkService.NumberOfActions() > 0 {
-		bulkResponse, _ := bulkService.Do(context.Background())
-		ProgressQueue <- len(bulkResponse.Indexed())
-	}
+	Done <- struct{}{}
 }
 
 func init() {
@@ -81,9 +65,8 @@ func init() {
 }
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	var numWorkers = flag.Int("--workers", 2, "Number of concurrent workers")
-
-	wg.Add(*numWorkers)
 	flag.Parse()
 
 	// Set Tracer
@@ -106,11 +89,9 @@ func main() {
 	p := make(map[string]interface{})
 	iter := session.DB(mgo_options.Mgo_dbname).C(mgo_options.Mgo_collname).Find(mgoQuery).Iter()
 	tracer.Trace("Start Indexing MongoDb")
-	requests := make(chan elastic.BulkableRequest)
+	// requests := make(chan elastic.BulkableRequest)
 	// spawn workers
-	for i := 0; i < *numWorkers; i++ {
-		go doService(i, es_options, requests)
-	}
+	requests := DispatchWorkers(*numWorkers, es_options)
 	go peekProgress()
 	start := time.Now()
 
@@ -135,8 +116,7 @@ func main() {
 	}
 	close(requests)
 	iter.Close()
-	wg.Wait()
+	<-Done
 	elapsed := time.Since(start)
-	close(ProgressQueue)
 	tracer.Trace("Documents Indexed in ", elapsed)
 }
