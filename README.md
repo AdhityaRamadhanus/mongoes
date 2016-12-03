@@ -20,6 +20,7 @@ Read First
 ------------
 * Everytime you run gondex, it will delete your current index in elasticsearch and create new mapping (and new index ofc)
 * These tools only work for elasticsearch v5
+* You need to run mongod instance in replicaset to use gowatch
 
 Installation
 ------------
@@ -34,30 +35,42 @@ Gondex
 Usage
 ------------
 ```
-gondex --db=<dbname> --collection=<collectioname> --index=<indexname> --type=<typename> --dbUri=<MongoURI> --mapping=/some/mapping.json --filter=/some/query.json --esUri=<elasticsearchURI>
+gondex --config=<filename> --path=<path>
 ```
-* db, Your Mongodb DB name
-* collection, Your mongodb collection name
-* index, Preferred elasticsearch index name (db name will be used if you leave this empty)
-* type, Preferred elasticsearch type name (collection name will be used if you leave this empty)
-* dbUri, MongoDB URI
-* esUri, Elasticsearch URI
-* filter, Json file that contains mongodb query to filter mongodb documents
-* mapping, Json file that define how you want to map every document in mongodb to elasticsearch
-* Mapping Example
+* config, Your configuration file (in json)
+* path, Path to the config file (if not provided gondex will search current directory)
+* Config Example
 ```
 {
-	"title": { // take title field in mongodb collection
-		"es_type": "string", // will be mapped to string
-		"es_index": "not_analyzed"
-	},
-	"completed": {
-		"es_name": "done", // will be mapped to field called done in elasticsearch
-		"es_type": "boolean"
+    "mongodb": {
+        "URI": "localhost:27018",
+        "database": "my_db",
+        "collection": "todos"
+    },
+    "elasticsearch": {
+        "URI": "http://localhost:9200",
+        "index": "my_db",
+        "type": "todos"
+    },
+    "query": {
+        "completed": true
+    },
+	{	
+		"title": { // take title field in mongodb collection
+			"es_type": "string", // will be mapped to string
+			"es_index": "not_analyzed"
+		},
+		"completed": {
+			"es_name": "done", // will be mapped to field called done in elasticsearch
+			"es_type": "boolean"
+		}
 	}
 }
 ```
+
 ![Graphql](media/gondes1.png)
+
+
 ![Graphql](media/gondes2.png)
 
 Gowatch 
@@ -67,15 +80,26 @@ Gowatch
 Usage
 ------------
 ```
-gowatch --db=<dbname> --collection=<collectioname> --index=<indexname> --type=<typename> --dbUri=<MongoURI> --esUri=<elasticsearchURI>
+gowatch --config=<filename> --path=<path>
 ```
-* db, Your Mongodb DB name
-* collection, Your mongodb collection name
-* index, Preferred elasticsearch index name (db name will be used if you leave this empty)
-* type, Preferred elasticsearch type name (collection name will be used if you leave this empty)
-* dbUri, MongoDB URI
-* esUri, Elasticsearch URI
+* config, Your configuration file (in json)
+* path, Path to the config file (if not provided gondex will search current directory)
 * Index and type assumed already have its own mapping, basically gowatch will take field on mongodb documents based on elastic search mapping
+* Config Example
+```
+{
+    "mongodb": {
+        "URI": "localhost:27018",
+        "database": "my_db",
+        "collection": "todos"
+    },
+    "elasticsearch": {
+        "URI": "http://localhost:9200",
+        "index": "my_db",
+        "type": "todos"
+    }
+}
+```
 
 License
 ----
