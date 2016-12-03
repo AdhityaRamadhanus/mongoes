@@ -39,13 +39,13 @@ func init() {
 		fatal(err)
 		os.Exit(1)
 	}
-	mgo_options.Mgo_dbname = viper.GetString("mongodb.database")
-	mgo_options.Mgo_collname = viper.GetString("mongodb.collection")
-	mgo_options.Mgo_URI = viper.GetString("mongodb.uri")
+	mgo_options.MgoDbname = viper.GetString("mongodb.database")
+	mgo_options.MgoCollname = viper.GetString("mongodb.collection")
+	mgo_options.MgoURI = viper.GetString("mongodb.uri")
 
-	es_options.ES_index = viper.GetString("elasticsearch.index")
-	es_options.ES_type = viper.GetString("elasticsearch.type")
-	es_options.ES_URI = viper.GetString("elasticsearch.uri")
+	es_options.EsIndex = viper.GetString("elasticsearch.index")
+	es_options.EsType = viper.GetString("elasticsearch.type")
+	es_options.EsURI = viper.GetString("elasticsearch.uri")
 }
 
 func main() {
@@ -53,7 +53,7 @@ func main() {
 	tracer := mongoes.NewTracer(os.Stdout)
 
 	// Get connected to Elasticsearch
-	tracer.Trace("Connecting to Elasticsearch cluster at", es_options.ES_URI)
+	tracer.Trace("Connecting to Elasticsearch cluster at", es_options.EsURI)
 	selectedField, err := getMapping(es_options)
 	if err != nil {
 		fatal(err)
@@ -62,8 +62,8 @@ func main() {
 	oplogs := processOplog(es_options, selectedField)
 
 	// Get connected to mongodb
-	tracer.Trace("Connecting to Mongodb at", mgo_options.Mgo_URI)
-	session, err := mongo.Dial(mgo_options.Mgo_URI)
+	tracer.Trace("Connecting to Mongodb at", mgo_options.MgoURI)
+	session, err := mongo.Dial(mgo_options.MgoURI)
 	if err != nil {
 		fatal(err)
 		return
@@ -75,7 +75,7 @@ func main() {
 	lastId <<= 32
 	lastId |= 1
 	var p Oplog
-	var nstring = mgo_options.Mgo_dbname + "." + mgo_options.Mgo_collname
+	var nstring = mgo_options.MgoDbname + "." + mgo_options.MgoCollname
 	iter := collection.Find(bson.M{"ns": nstring, "ts": bson.M{"$gt": lastId}}).Tail(5 * time.Second)
 	for {
 		for iter.Next(&p) {

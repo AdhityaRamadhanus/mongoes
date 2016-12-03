@@ -10,16 +10,16 @@ import (
 
 func getMapping(es_options mongoes.ESOptions) ([]string, error) {
 	// Get elastic search mapping
-	client, err := elastic.NewClient(elastic.SetURL(es_options.ES_URI))
+	client, err := elastic.NewClient(elastic.SetURL(es_options.EsURI))
 	if err != nil {
 		return nil, err
 	}
 
-	rawMapping, err := client.GetMapping().Index(es_options.ES_index).Type(es_options.ES_type).Pretty(true).Do(context.Background())
+	rawMapping, err := client.GetMapping().Index(es_options.EsIndex).Type(es_options.EsType).Pretty(true).Do(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	jsonPath := es_options.ES_index + ".mappings." + es_options.ES_type + ".properties"
+	jsonPath := es_options.EsIndex + ".mappings." + es_options.EsType + ".properties"
 	esMapping := mongoes.GetDeepObject(rawMapping, jsonPath)
 	selectedField := make([]string, 1)
 	for key, _ := range esMapping {
@@ -31,12 +31,12 @@ func getMapping(es_options mongoes.ESOptions) ([]string, error) {
 func processOplog(es_options mongoes.ESOptions, selectedField []string) chan<- Oplog {
 	oplogs := make(chan Oplog, 1000)
 	go func(es_options mongoes.ESOptions, selectedField []string) {
-		client, err := elastic.NewClient(elastic.SetURL(es_options.ES_URI))
+		client, err := elastic.NewClient(elastic.SetURL(es_options.EsURI))
 		if err != nil {
 			return
 		}
-		indexService := elastic.NewIndexService(client).Index(es_options.ES_index).Type(es_options.ES_type)
-		deleteService := elastic.NewDeleteService(client).Index(es_options.ES_index).Type(es_options.ES_type)
+		indexService := elastic.NewIndexService(client).Index(es_options.EsIndex).Type(es_options.EsType)
+		deleteService := elastic.NewDeleteService(client).Index(es_options.EsIndex).Type(es_options.EsType)
 
 		for p := range oplogs {
 			if p.Op == "i" || p.Op == "u" {

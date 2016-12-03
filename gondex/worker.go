@@ -14,11 +14,11 @@ func DispatchWorkers(numWorkers int, es_options mongoes.ESOptions) chan<- elasti
 	for i := 0; i < numWorkers; i++ {
 		go func(id int, es_options mongoes.ESOptions, requests <-chan elastic.BulkableRequest) {
 			defer wg.Done()
-			client, err := elastic.NewClient(elastic.SetURL(es_options.ES_URI))
+			client, err := elastic.NewClient(elastic.SetURL(es_options.EsURI))
 			if err != nil {
 				return
 			}
-			bulkService := elastic.NewBulkService(client).Index(es_options.ES_index).Type(es_options.ES_type)
+			bulkService := elastic.NewBulkService(client).Index(es_options.EsIndex).Type(es_options.EsType)
 			for v := range requests {
 				bulkService.Add(v)
 				if bulkService.NumberOfActions() == 1000 {

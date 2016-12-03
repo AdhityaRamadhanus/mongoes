@@ -2,6 +2,7 @@ package main
 
 import (
 	// "context"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/AdhityaRamadhanus/mongoes"
@@ -61,14 +62,14 @@ func init() {
 		fatal(err)
 		os.Exit(1)
 	}
-	mgo_options.Mgo_dbname = viper.GetString("mongodb.database")
-	mgo_options.Mgo_collname = viper.GetString("mongodb.collection")
-	mgo_options.Mgo_URI = viper.GetString("mongodb.uri")
+	mgo_options.MgoDbname = viper.GetString("mongodb.database")
+	mgo_options.MgoCollname = viper.GetString("mongodb.collection")
+	mgo_options.MgoURI = viper.GetString("mongodb.uri")
 	mgoQuery = viper.GetStringMap("query")
 
-	es_options.ES_index = viper.GetString("elasticsearch.index")
-	es_options.ES_type = viper.GetString("elasticsearch.type")
-	es_options.ES_URI = viper.GetString("elasticsearch.uri")
+	es_options.EsIndex = viper.GetString("elasticsearch.index")
+	es_options.EsType = viper.GetString("elasticsearch.type")
+	es_options.EsURI = viper.GetString("elasticsearch.uri")
 	esMapping = viper.GetStringMap("mapping")
 }
 
@@ -86,8 +87,8 @@ func main() {
 	}
 
 	// Get connected to mongodb
-	tracer.Trace("Connecting to Mongodb at ", mgo_options.Mgo_URI)
-	session, err := mongo.Dial(mgo_options.Mgo_URI)
+	tracer.Trace("Connecting to Mongodb at ", mgo_options.MgoURI)
+	session, err := mongo.Dial(mgo_options.MgoURI)
 	if err != nil {
 		fatal(err)
 		return
@@ -95,7 +96,7 @@ func main() {
 	defer session.Close()
 
 	p := make(map[string]interface{})
-	iter := session.DB(mgo_options.Mgo_dbname).C(mgo_options.Mgo_collname).Find(mgoQuery).Iter()
+	iter := session.DB(mgo_options.MgoDbname).C(mgo_options.MgoCollname).Find(mgoQuery).Iter()
 	tracer.Trace("Start Indexing MongoDb")
 	// requests := make(chan elastic.BulkableRequest)
 	// spawn workers
@@ -116,8 +117,8 @@ func main() {
 			}
 		}
 		bulkRequest := elastic.NewBulkIndexRequest().
-			Index(es_options.ES_index).
-			Type(es_options.ES_type).
+			Index(es_options.EsIndex).
+			Type(es_options.EsType).
 			Id(p["_id"].(bson.ObjectId).Hex()).
 			Doc(esBody)
 		requests <- bulkRequest

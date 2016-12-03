@@ -1,13 +1,15 @@
 package mongoes
 
+// ESOptions is options struct for elasticsearch, included is index name, type name and URI for ES cluster
 type ESOptions struct {
-	ES_index string
-	ES_type  string
-	ES_URI   string
+	EsIndex string
+	EsType  string
+	EsURI   string
 }
 
+// MgoOptions is optiosn struct for mongo, included is database name, collection name, and URI for mongo
 type MgoOptions struct {
-	Mgo_dbname   string
-	Mgo_collname string
-	Mgo_URI      string
+	MgoDbname   string
+	MgoCollname string
+	MgoURI      string
 }
