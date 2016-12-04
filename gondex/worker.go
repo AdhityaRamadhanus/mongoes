@@ -7,18 +7,18 @@ import (
 	"sync"
 )
 
-func DispatchWorkers(numWorkers int, es_options mongoes.ESOptions) chan<- elastic.BulkableRequest {
+func dispatchWorkers(numWorkers int, esOptions mongoes.ESOptions) chan<- elastic.BulkableRequest {
 	var wg sync.WaitGroup
 	wg.Add(numWorkers)
 	jobQueue := make(chan elastic.BulkableRequest, 1000)
 	for i := 0; i < numWorkers; i++ {
-		go func(id int, es_options mongoes.ESOptions, requests <-chan elastic.BulkableRequest) {
+		go func(id int, esOptions mongoes.ESOptions, requests <-chan elastic.BulkableRequest) {
 			defer wg.Done()
-			client, err := elastic.NewClient(elastic.SetURL(es_options.EsURI))
+			client, err := elastic.NewClient(elastic.SetURL(esOptions.EsURI))
 			if err != nil {
 				return
 			}
-			bulkService := elastic.NewBulkService(client).Index(es_options.EsIndex).Type(es_options.EsType)
+			bulkService := elastic.NewBulkService(client).Index(esOptions.EsIndex).Type(esOptions.EsType)
 			for v := range requests {
 				bulkService.Add(v)
 				if bulkService.NumberOfActions() == 1000 {
@@ -30,7 +30,7 @@ func DispatchWorkers(numWorkers int, es_options mongoes.ESOptions) chan<- elasti
 				bulkResponse, _ := bulkService.Do(context.Background())
 				ProgressQueue <- len(bulkResponse.Indexed())
 			}
-		}(i, es_options, jobQueue)
+		}(i, esOptions, jobQueue)
 	}
 	go func() {
 		wg.Wait()

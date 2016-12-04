@@ -32,24 +32,24 @@ func createMapping(doc map[string]interface{}) (map[string]interface{}, error) {
 }
 
 // SetupIndexAndMapping will Delete Index and Create new Mapping
-func setupIndexAndMapping(es_options mongoes.ESOptions, rawMapping map[string]interface{}, tracer mongoes.Tracer) error {
-	tracer.Trace("Connecting to elasticsearch cluster ", es_options.EsURI)
-	client, err := elastic.NewClient(elastic.SetURL(es_options.EsURI))
+func setupIndexAndMapping(esOptions mongoes.ESOptions, rawMapping map[string]interface{}, tracer mongoes.Tracer) error {
+	tracer.Trace("Connecting to elasticsearch cluster ", esOptions.EsURI)
+	client, err := elastic.NewClient(elastic.SetURL(esOptions.EsURI))
 	if err != nil {
 		return err
 	}
-	tracer.Trace("Delete current index ", es_options.EsIndex)
-	client.DeleteIndex(es_options.EsIndex).Do(context.Background())
+	tracer.Trace("Delete current index ", esOptions.EsIndex)
+	client.DeleteIndex(esOptions.EsIndex).Do(context.Background())
 
-	_, err = client.CreateIndex(es_options.EsIndex).Do(context.Background())
+	_, err = client.CreateIndex(esOptions.EsIndex).Do(context.Background())
 	if err != nil {
 		return err
 	}
 	esMapping, _ := createMapping(rawMapping)
-	_, err = client.PutMapping().Index(es_options.EsIndex).Type(es_options.EsType).BodyJson(esMapping).Do(context.Background())
+	_, err = client.PutMapping().Index(esOptions.EsIndex).Type(esOptions.EsType).BodyJson(esMapping).Do(context.Background())
 	if err != nil {
 		return err
 	}
-	tracer.Trace("Create new mapping ", es_options.EsIndex, es_options.EsType)
+	tracer.Trace("Create new mapping ", esOptions.EsIndex, esOptions.EsType)
 	return nil
 }

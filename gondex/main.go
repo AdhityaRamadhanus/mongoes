@@ -18,10 +18,11 @@ import (
 )
 
 var (
-	counts        int32 = 0
-	ProgressQueue       = make(chan int)
-	es_options    mongoes.ESOptions
-	mgo_options   mongoes.MgoOptions
+	counts int32
+	// ProgressQueue is channel of int that track how many documents indexed
+	ProgressQueue = make(chan int)
+	esOptions     mongoes.ESOptions
+	mgoOptions    mongoes.MgoOptions
 	mgoQuery      map[string]interface{}
 	esMapping     map[string]interface{}
 	configName    = flag.String("config", "", "config file")
@@ -58,14 +59,14 @@ func init() {
 		fatal(err)
 		os.Exit(1)
 	}
-	mgo_options.MgoDbname = viper.GetString("mongodb.database")
-	mgo_options.MgoCollname = viper.GetString("mongodb.collection")
-	mgo_options.MgoURI = viper.GetString("mongodb.uri")
+	mgoOptions.MgoDbname = viper.GetString("mongodb.database")
+	mgoOptions.MgoCollname = viper.GetString("mongodb.collection")
+	mgoOptions.MgoURI = viper.GetString("mongodb.uri")
 	mgoQuery = viper.GetStringMap("query")
 
-	es_options.EsIndex = viper.GetString("elasticsearch.index")
-	es_options.EsType = viper.GetString("elasticsearch.type")
-	es_options.EsURI = viper.GetString("elasticsearch.uri")
+	esOptions.EsIndex = viper.GetString("elasticsearch.index")
+	esOptions.EsType = viper.GetString("elasticsearch.type")
+	esOptions.EsURI = viper.GetString("elasticsearch.uri")
 	esMapping = viper.GetStringMap("mapping")
 }
 
@@ -77,14 +78,14 @@ func main() {
 	// Set Tracer
 	tracer := mongoes.NewTracer(os.Stdout)
 
-	if err := setupIndexAndMapping(es_options, esMapping, tracer); err != nil {
+	if err := setupIndexAndMapping(esOptions, esMapping, tracer); err != nil {
 		fatal(err)
 		return
 	}
 
 	// Get connected to mongodb
-	tracer.Trace("Connecting to Mongodb at ", mgo_options.MgoURI)
-	session, err := mongo.Dial(mgo_options.MgoURI)
+	tracer.Trace("Connecting to Mongodb at ", mgoOptions.MgoURI)
+	session, err := mongo.Dial(mgoOptions.MgoURI)
 	if err != nil {
 		fatal(err)
 		return
@@ -92,11 +93,11 @@ func main() {
 	defer session.Close()
 
 	p := make(map[string]interface{})
-	iter := session.DB(mgo_options.MgoDbname).C(mgo_options.MgoCollname).Find(mgoQuery).Iter()
+	iter := session.DB(mgoOptions.MgoDbname).C(mgoOptions.MgoCollname).Find(mgoQuery).Iter()
 	tracer.Trace("Start Indexing MongoDb")
 	// requests := make(chan elastic.BulkableRequest)
 	// Dispatch workers, returned a channel (work queue)
-	requests := DispatchWorkers(*numWorkers, es_options)
+	requests := dispatchWorkers(*numWorkers, esOptions)
 	// run a goroutines to watch the progres
 	go peekProgress()
 	// Handle ctrl+c
@@ -121,8 +122,8 @@ func main() {
 			}
 		}
 		bulkRequest := elastic.NewBulkIndexRequest().
-			Index(es_options.EsIndex).
-			Type(es_options.EsType).
+			Index(esOptions.EsIndex).
+			Type(esOptions.EsType).
 			Id(p["_id"].(bson.ObjectId).Hex()).
 			Doc(esBody)
 		select {
