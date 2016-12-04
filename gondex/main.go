@@ -1,7 +1,6 @@
 package main
 
 import (
-	// "context"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,7 +10,6 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	elastic "gopkg.in/olivere/elastic.v5"
 	"os"
-	// "sync"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -20,16 +18,12 @@ import (
 var (
 	counts        int32 = 0
 	ProgressQueue       = make(chan int)
-
-	es_options mongoes.ESOptions
-
-	mgo_options mongoes.MgoOptions
-
-	mgoQuery   map[string]interface{}
-	esMapping  map[string]interface{}
-	configName = flag.String("config", "", "config file")
-	pathConfig = flag.String("path", ".", "config path")
-
+	es_options    mongoes.ESOptions
+	mgo_options   mongoes.MgoOptions
+	mgoQuery      map[string]interface{}
+	esMapping     map[string]interface{}
+	configName    = flag.String("config", "", "config file")
+	pathConfig    = flag.String("path", ".", "config path")
 	// Done channel signal, main goroutines should exit
 	Done = make(chan struct{})
 )
