@@ -61,12 +61,12 @@ func init() {
 	}
 	mgoOptions.MgoDbname = viper.GetString("mongodb.database")
 	mgoOptions.MgoCollname = viper.GetString("mongodb.collection")
-	mgoOptions.MgoURI = viper.GetString("mongodb.uri")
+	mgoOptions.MgoURI = viper.GetString("mongodb.URI")
 	mgoQuery = viper.GetStringMap("query")
 
 	esOptions.EsIndex = viper.GetString("elasticsearch.index")
 	esOptions.EsType = viper.GetString("elasticsearch.type")
-	esOptions.EsURI = viper.GetString("elasticsearch.uri")
+	esOptions.EsURI = viper.GetString("elasticsearch.URI")
 	esMapping = viper.GetStringMap("mapping")
 }
 
@@ -95,7 +95,6 @@ func main() {
 	p := make(map[string]interface{})
 	iter := session.DB(mgoOptions.MgoDbname).C(mgoOptions.MgoCollname).Find(mgoQuery).Iter()
 	tracer.Trace("Start Indexing MongoDb")
-	// requests := make(chan elastic.BulkableRequest)
 	// Dispatch workers, returned a channel (work queue)
 	requests := dispatchWorkers(*numWorkers, esOptions)
 	// run a goroutines to watch the progres
