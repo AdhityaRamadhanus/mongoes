@@ -1,7 +1,6 @@
 package main
 
 import (
-	// "context"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,25 +10,23 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	elastic "gopkg.in/olivere/elastic.v5"
 	"os"
-	// "sync"
+	"os/signal"
 	"runtime"
 	"sync/atomic"
+	"syscall"
 	"time"
 )
 
 var (
-	counts        int32 = 0
-	ProgressQueue       = make(chan int)
-
-	es_options mongoes.ESOptions
-
-	mgo_options mongoes.MgoOptions
-
-	mgoQuery   map[string]interface{}
-	esMapping  map[string]interface{}
-	configName = flag.String("config", "", "config file")
-	pathConfig = flag.String("path", ".", "config path")
-
+	counts int32
+	// ProgressQueue is channel of int that track how many documents indexed
+	ProgressQueue = make(chan int)
+	esOptions     mongoes.ESOptions
+	mgoOptions    mongoes.MgoOptions
+	mgoQuery      map[string]interface{}
+	esMapping     map[string]interface{}
+	configName    = flag.String("config", "", "config file")
+	pathConfig    = flag.String("path", ".", "config path")
 	// Done channel signal, main goroutines should exit
 	Done = make(chan struct{})
 )
@@ -62,14 +59,14 @@ func init() {
 		fatal(err)
 		os.Exit(1)
 	}
-	mgo_options.MgoDbname = viper.GetString("mongodb.database")
-	mgo_options.MgoCollname = viper.GetString("mongodb.collection")
-	mgo_options.MgoURI = viper.GetString("mongodb.uri")
+	mgoOptions.MgoDbname = viper.GetString("mongodb.database")
+	mgoOptions.MgoCollname = viper.GetString("mongodb.collection")
+	mgoOptions.MgoURI = viper.GetString("mongodb.URI")
 	mgoQuery = viper.GetStringMap("query")
 
-	es_options.EsIndex = viper.GetString("elasticsearch.index")
-	es_options.EsType = viper.GetString("elasticsearch.type")
-	es_options.EsURI = viper.GetString("elasticsearch.uri")
+	esOptions.EsIndex = viper.GetString("elasticsearch.index")
+	esOptions.EsType = viper.GetString("elasticsearch.type")
+	esOptions.EsURI = viper.GetString("elasticsearch.URI")
 	esMapping = viper.GetStringMap("mapping")
 }
 
@@ -81,14 +78,14 @@ func main() {
 	// Set Tracer
 	tracer := mongoes.NewTracer(os.Stdout)
 
-	if err := setupIndexAndMapping(es_options, esMapping, tracer); err != nil {
+	if err := setupIndexAndMapping(esOptions, esMapping, tracer); err != nil {
 		fatal(err)
 		return
 	}
 
 	// Get connected to mongodb
-	tracer.Trace("Connecting to Mongodb at ", mgo_options.MgoURI)
-	session, err := mongo.Dial(mgo_options.MgoURI)
+	tracer.Trace("Connecting to Mongodb at ", mgoOptions.MgoURI)
+	session, err := mongo.Dial(mgoOptions.MgoURI)
 	if err != nil {
 		fatal(err)
 		return
@@ -96,14 +93,21 @@ func main() {
 	defer session.Close()
 
 	p := make(map[string]interface{})
-	iter := session.DB(mgo_options.MgoDbname).C(mgo_options.MgoCollname).Find(mgoQuery).Iter()
+	iter := session.DB(mgoOptions.MgoDbname).C(mgoOptions.MgoCollname).Find(mgoQuery).Iter()
 	tracer.Trace("Start Indexing MongoDb")
-	// requests := make(chan elastic.BulkableRequest)
-	// spawn workers
-	requests := DispatchWorkers(*numWorkers, es_options)
+	// Dispatch workers, returned a channel (work queue)
+	requests := dispatchWorkers(*numWorkers, esOptions)
+	// run a goroutines to watch the progres
 	go peekProgress()
-	start := time.Now()
+	// Handle ctrl+c
+	termChan := make(chan os.Signal, 1)
+	signal.Notify(termChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+	go func() {
+		<-termChan
+		Done <- struct{}{}
+	}()
 
+	start := time.Now()
 	for iter.Next(&p) {
 		var esBody = make(map[string]interface{})
 		for k, v := range esMapping {
@@ -117,15 +121,23 @@ func main() {
 			}
 		}
 		bulkRequest := elastic.NewBulkIndexRequest().
-			Index(es_options.EsIndex).
-			Type(es_options.EsType).
+			Index(esOptions.EsIndex).
+			Type(esOptions.EsType).
 			Id(p["_id"].(bson.ObjectId).Hex()).
 			Doc(esBody)
-		requests <- bulkRequest
+		select {
+		case <-Done: // Early termination can be caused by no workers spawned (triggered by closing of ProgressQueue) and user hit ctrl+c
+			fmt.Println("Early Termination")
+			close(requests)
+			iter.Close()
+			return
+		default:
+			requests <- bulkRequest
+		}
 	}
 	close(requests)
 	iter.Close()
 	<-Done
 	elapsed := time.Since(start)
-	tracer.Trace("Documents Indexed in ", elapsed)
+	tracer.Trace(atomic.LoadInt32(&counts), " Documents Indexed in ", elapsed)
 }

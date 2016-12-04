@@ -8,35 +8,35 @@ import (
 	elastic "gopkg.in/olivere/elastic.v5"
 )
 
-func getMapping(es_options mongoes.ESOptions) ([]string, error) {
+func getMapping(esOptions mongoes.ESOptions) ([]string, error) {
 	// Get elastic search mapping
-	client, err := elastic.NewClient(elastic.SetURL(es_options.EsURI))
+	client, err := elastic.NewClient(elastic.SetURL(esOptions.EsURI))
 	if err != nil {
 		return nil, err
 	}
 
-	rawMapping, err := client.GetMapping().Index(es_options.EsIndex).Type(es_options.EsType).Pretty(true).Do(context.Background())
+	rawMapping, err := client.GetMapping().Index(esOptions.EsIndex).Type(esOptions.EsType).Pretty(true).Do(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	jsonPath := es_options.EsIndex + ".mappings." + es_options.EsType + ".properties"
+	jsonPath := esOptions.EsIndex + ".mappings." + esOptions.EsType + ".properties"
 	esMapping := mongoes.GetDeepObject(rawMapping, jsonPath)
 	selectedField := make([]string, 1)
-	for key, _ := range esMapping {
+	for key := range esMapping {
 		selectedField = append(selectedField, key)
 	}
 	return selectedField, nil
 }
 
-func processOplog(es_options mongoes.ESOptions, selectedField []string) chan<- Oplog {
+func processOplog(esOptions mongoes.ESOptions, selectedField []string) chan<- Oplog {
 	oplogs := make(chan Oplog, 1000)
-	go func(es_options mongoes.ESOptions, selectedField []string) {
-		client, err := elastic.NewClient(elastic.SetURL(es_options.EsURI))
+	go func(esOptions mongoes.ESOptions, selectedField []string) {
+		client, err := elastic.NewClient(elastic.SetURL(esOptions.EsURI))
 		if err != nil {
 			return
 		}
-		indexService := elastic.NewIndexService(client).Index(es_options.EsIndex).Type(es_options.EsType)
-		deleteService := elastic.NewDeleteService(client).Index(es_options.EsIndex).Type(es_options.EsType)
+		indexService := elastic.NewIndexService(client).Index(esOptions.EsIndex).Type(esOptions.EsType)
+		deleteService := elastic.NewDeleteService(client).Index(esOptions.EsIndex).Type(esOptions.EsType)
 
 		for p := range oplogs {
 			if p.Op == "i" || p.Op == "u" {
@@ -46,18 +46,18 @@ func processOplog(es_options mongoes.ESOptions, selectedField []string) chan<- O
 						indexRequest[v] = p.O[v]
 					}
 				}
-				stringId := p.O["_id"].(bson.ObjectId).Hex()
-				if _, err := indexService.Id(stringId).BodyJson(indexRequest).Do(context.Background()); err == nil {
+				stringID := p.O["_id"].(bson.ObjectId).Hex()
+				if _, err := indexService.Id(stringID).BodyJson(indexRequest).Do(context.Background()); err == nil {
 					fmt.Println("Successfully indexed")
 				}
 			} else if p.Op == "d" {
-				deleteRequestId := p.O["_id"].(bson.ObjectId).Hex()
-				fmt.Println(deleteRequestId)
-				if _, err := deleteService.Id(deleteRequestId).Do(context.Background()); err == nil {
+				deleteRequestID := p.O["_id"].(bson.ObjectId).Hex()
+				fmt.Println(deleteRequestID)
+				if _, err := deleteService.Id(deleteRequestID).Do(context.Background()); err == nil {
 					fmt.Println("Successfully deleted")
 				}
 			}
 		}
-	}(es_options, selectedField)
+	}(esOptions, selectedField)
 	return oplogs
 }

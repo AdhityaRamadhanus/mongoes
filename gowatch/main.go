@@ -19,10 +19,10 @@ func fatal(e error) {
 }
 
 var (
-	es_options  mongoes.ESOptions
-	mgo_options mongoes.MgoOptions
-	configName  = flag.String("config", "", "config file")
-	pathConfig  = flag.String("path", ".", "config path")
+	esOptions  mongoes.ESOptions
+	mgoOptions mongoes.MgoOptions
+	configName = flag.String("config", "", "config file")
+	pathConfig = flag.String("path", ".", "config path")
 )
 
 func init() {
@@ -39,13 +39,13 @@ func init() {
 		fatal(err)
 		os.Exit(1)
 	}
-	mgo_options.MgoDbname = viper.GetString("mongodb.database")
-	mgo_options.MgoCollname = viper.GetString("mongodb.collection")
-	mgo_options.MgoURI = viper.GetString("mongodb.uri")
+	mgoOptions.MgoDbname = viper.GetString("mongodb.database")
+	mgoOptions.MgoCollname = viper.GetString("mongodb.collection")
+	mgoOptions.MgoURI = viper.GetString("mongodb.uri")
 
-	es_options.EsIndex = viper.GetString("elasticsearch.index")
-	es_options.EsType = viper.GetString("elasticsearch.type")
-	es_options.EsURI = viper.GetString("elasticsearch.uri")
+	esOptions.EsIndex = viper.GetString("elasticsearch.index")
+	esOptions.EsType = viper.GetString("elasticsearch.type")
+	esOptions.EsURI = viper.GetString("elasticsearch.uri")
 }
 
 func main() {
@@ -53,17 +53,17 @@ func main() {
 	tracer := mongoes.NewTracer(os.Stdout)
 
 	// Get connected to Elasticsearch
-	tracer.Trace("Connecting to Elasticsearch cluster at", es_options.EsURI)
-	selectedField, err := getMapping(es_options)
+	tracer.Trace("Connecting to Elasticsearch cluster at", esOptions.EsURI)
+	selectedField, err := getMapping(esOptions)
 	if err != nil {
 		fatal(err)
 		return
 	}
-	oplogs := processOplog(es_options, selectedField)
 
+	oplogs := processOplog(esOptions, selectedField)
 	// Get connected to mongodb
-	tracer.Trace("Connecting to Mongodb at", mgo_options.MgoURI)
-	session, err := mongo.Dial(mgo_options.MgoURI)
+	tracer.Trace("Connecting to Mongodb at", mgoOptions.MgoURI)
+	session, err := mongo.Dial(mgoOptions.MgoURI)
 	if err != nil {
 		fatal(err)
 		return
@@ -71,15 +71,15 @@ func main() {
 	defer session.Close()
 	collection := session.DB("local").C("oplog.rs")
 	fmt.Println("Start Tailing MongoDb")
-	var lastId bson.MongoTimestamp = bson.MongoTimestamp(time.Now().Unix())
-	lastId <<= 32
-	lastId |= 1
+	var lastID = bson.MongoTimestamp(time.Now().Unix())
+	lastID <<= 32
+	lastID |= 1
 	var p Oplog
-	var nstring = mgo_options.MgoDbname + "." + mgo_options.MgoCollname
-	iter := collection.Find(bson.M{"ns": nstring, "ts": bson.M{"$gt": lastId}}).Tail(5 * time.Second)
+	var nstring = mgoOptions.MgoDbname + "." + mgoOptions.MgoCollname
+	iter := collection.Find(bson.M{"ns": nstring, "ts": bson.M{"$gt": lastID}}).Tail(5 * time.Second)
 	for {
 		for iter.Next(&p) {
-			lastId = p.Ts
+			lastID = p.Ts
 			oplogs <- p
 		}
 		if iter.Err() != nil {
@@ -89,7 +89,7 @@ func main() {
 		if iter.Timeout() {
 			continue
 		}
-		query := collection.Find(bson.M{"ns": nstring, "ts": bson.M{"$gt": lastId}})
+		query := collection.Find(bson.M{"ns": nstring, "ts": bson.M{"$gt": lastID}})
 		iter = query.Tail(5 * time.Second)
 	}
 	close(oplogs)

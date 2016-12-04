@@ -2,7 +2,7 @@
 .PHONY: test
 
 # Flags #
-GO_FLAGS = -o
+GO_FLAGS = -race -o
 
 # Path configuration #
 GONDEX_DIR = gondex
