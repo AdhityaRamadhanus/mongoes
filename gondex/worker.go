@@ -10,7 +10,7 @@ import (
 func DispatchWorkers(numWorkers int, es_options mongoes.ESOptions) chan<- elastic.BulkableRequest {
 	var wg sync.WaitGroup
 	wg.Add(numWorkers)
-	jobQueue := make(chan elastic.BulkableRequest)
+	jobQueue := make(chan elastic.BulkableRequest, 1000)
 	for i := 0; i < numWorkers; i++ {
 		go func(id int, es_options mongoes.ESOptions, requests <-chan elastic.BulkableRequest) {
 			defer wg.Done()
@@ -35,6 +35,7 @@ func DispatchWorkers(numWorkers int, es_options mongoes.ESOptions) chan<- elasti
 	go func() {
 		wg.Wait()
 		close(ProgressQueue)
+
 	}()
 	return jobQueue
 }

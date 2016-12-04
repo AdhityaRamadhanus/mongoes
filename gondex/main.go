@@ -10,8 +10,10 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	elastic "gopkg.in/olivere/elastic.v5"
 	"os"
+	"os/signal"
 	"runtime"
 	"sync/atomic"
+	"syscall"
 	"time"
 )
 
@@ -93,11 +95,19 @@ func main() {
 	iter := session.DB(mgo_options.MgoDbname).C(mgo_options.MgoCollname).Find(mgoQuery).Iter()
 	tracer.Trace("Start Indexing MongoDb")
 	// requests := make(chan elastic.BulkableRequest)
-	// spawn workers
+	// Dispatch workers, returned a channel (work queue)
 	requests := DispatchWorkers(*numWorkers, es_options)
+	// run a goroutines to watch the progres
 	go peekProgress()
-	start := time.Now()
+	// Handle ctrl+c
+	termChan := make(chan os.Signal, 1)
+	signal.Notify(termChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+	go func() {
+		<-termChan
+		Done <- struct{}{}
+	}()
 
+	start := time.Now()
 	for iter.Next(&p) {
 		var esBody = make(map[string]interface{})
 		for k, v := range esMapping {
@@ -115,11 +125,19 @@ func main() {
 			Type(es_options.EsType).
 			Id(p["_id"].(bson.ObjectId).Hex()).
 			Doc(esBody)
-		requests <- bulkRequest
+		select {
+		case <-Done: // Early termination can be caused by no workers spawned (triggered by closing of ProgressQueue) and user hit ctrl+c
+			fmt.Println("Early Termination")
+			close(requests)
+			iter.Close()
+			return
+		default:
+			requests <- bulkRequest
+		}
 	}
 	close(requests)
 	iter.Close()
 	<-Done
 	elapsed := time.Since(start)
-	tracer.Trace("Documents Indexed in ", elapsed)
+	tracer.Trace(atomic.LoadInt32(&counts), " Documents Indexed in ", elapsed)
 }
