@@ -55,7 +55,7 @@ gondex --config=<filename> --path=<path>
     "query": {
         "completed": true
     },
-	{	
+	"mapping": {	
 		"title": { // take title field in mongodb collection
 			"es_type": "string", // will be mapped to string
 			"es_index": "not_analyzed"
