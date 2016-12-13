@@ -43,20 +43,20 @@ gondex --config=<filename> --path=<path>
 ```
 {
     "mongodb": {
-        "URI": "localhost:27018",
-        "database": "my_db",
-        "collection": "todos"
+        "uri": "localhost:27017",
+        "database": "scaleable_dev",
+        "collection": "tbljobs"
     },
     "elasticsearch": {
-        "URI": "http://localhost:9200",
-        "index": "my_db",
-        "type": "todos"
+        "uri": "http://localhost:9200",
+        "index": "scaleable_dev",
+        "type": "tbljobs"
     },
     "query": {
         "completed": true
     },
-	"mapping": {	
-		"title": { // take title field in mongodb collection
+	  "mapping": {	
+		  "title": { // take title field in mongodb collection
 			"es_type": "string", // will be mapped to string
 			"es_index": "not_analyzed"
 		},
