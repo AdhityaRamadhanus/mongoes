@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/AdhityaRamadhanus/mongoes"
-	"github.com/spf13/viper"
+	"github.com/AdhityaRamadhanus/viper"
 	mongo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	elastic "gopkg.in/olivere/elastic.v5"
@@ -59,14 +59,16 @@ func init() {
 		fatal(err)
 		os.Exit(1)
 	}
+
 	mgoOptions.MgoDbname = viper.GetString("mongodb.database")
 	mgoOptions.MgoCollname = viper.GetString("mongodb.collection")
-	mgoOptions.MgoURI = viper.GetString("mongodb.URI")
+	mgoOptions.MgoURI = viper.GetString("mongodb.uri")
 	mgoQuery = viper.GetStringMap("query")
-
+	// tempesOptions := viper.GetStringMap("elasticsearch")
+	// fmt.Println(tempesOptions)
 	esOptions.EsIndex = viper.GetString("elasticsearch.index")
 	esOptions.EsType = viper.GetString("elasticsearch.type")
-	esOptions.EsURI = viper.GetString("elasticsearch.URI")
+	esOptions.EsURI = viper.GetString("elasticsearch.uri")
 	esMapping = viper.GetStringMap("mapping")
 }
 
