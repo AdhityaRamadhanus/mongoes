@@ -51,7 +51,7 @@ func init() {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println(m)
+		fmt.Println(m, mongoes.GetStringJSON(m, "mongodb.uri"))
 	}
 	flag.Parse()
 	if len(*configName) == 0 {
