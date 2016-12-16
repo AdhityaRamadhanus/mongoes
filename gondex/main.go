@@ -46,6 +46,13 @@ func peekProgress() {
 }
 
 func init() {
+	var m map[string]interface{}
+	err := mongoes.ReadJSONFromFile("config2.json", &m)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(m)
+	}
 	flag.Parse()
 	if len(*configName) == 0 {
 		fatal(errors.New("Please provide config file and config path"))
@@ -54,7 +61,7 @@ func init() {
 	viper.SetConfigName(*configName)
 	viper.AddConfigPath(*pathConfig)
 
-	err := viper.ReadInConfig()
+	err = viper.ReadInConfig()
 	if err != nil {
 		fatal(err)
 		os.Exit(1)
