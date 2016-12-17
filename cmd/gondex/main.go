@@ -30,6 +30,7 @@ var (
 	// see https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html for more information
 	esMapping  map[string]interface{}
 	pathConfig = flag.String("config", "", "config path")
+	numWorkers = flag.Int("--workers", 2, "Number of concurrent workers")
 	// Done channel signal, main goroutines should exit
 	Done = make(chan struct{})
 )
@@ -50,7 +51,7 @@ func peekProgress() {
 	Done <- struct{}{}
 }
 
-func init() {
+func readConfig() {
 	// Parse the flag
 	flag.Parse()
 	if len(*pathConfig) == 0 {
@@ -77,9 +78,7 @@ func init() {
 }
 
 func main() {
-	var numWorkers = flag.Int("--workers", 2, "Number of concurrent workers")
-	flag.Parse()
-
+	readConfig()
 	// Set Tracer
 	tracer := mongoes.NewTracer(os.Stdout)
 
@@ -117,17 +116,7 @@ func main() {
 	for iter.Next(&p) {
 		// take the value from mongodb documents
 		// not all the field in documents will be indexed depends on your mapping
-		var esBody = make(map[string]interface{})
-		for k, v := range esMapping {
-			mgoVal, ok := p[k]
-			if ok {
-				var key = (v.(map[string]interface{}))["es_name"]
-				if key == nil {
-					key = k
-				}
-				esBody[key.(string)] = mgoVal
-			}
-		}
+		esBody := createEsIndexBody(&p, &esMapping)
 		// Create Elasticsearch Bulk Index Request
 		bulkRequest := elastic.NewBulkIndexRequest().
 			Index(esOptions.EsIndex).

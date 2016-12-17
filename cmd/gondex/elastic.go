@@ -74,3 +74,18 @@ func setupIndexAndMapping(esOptions mongoes.ESOptions, rawMapping map[string]int
 	tracer.Trace("Create new mapping ", esOptions.EsIndex, esOptions.EsType)
 	return nil
 }
+
+func createEsIndexBody(mongoDoc *map[string]interface{}, esMapping *map[string]interface{}) map[string]interface{} {
+	var esBody = make(map[string]interface{})
+	for k, v := range *esMapping {
+		mgoVal, ok := (*mongoDoc)[k]
+		if ok {
+			var key = (v.(map[string]interface{}))["es_name"]
+			if key == nil {
+				key = k
+			}
+			esBody[key.(string)] = mgoVal
+		}
+	}
+	return esBody
+}
