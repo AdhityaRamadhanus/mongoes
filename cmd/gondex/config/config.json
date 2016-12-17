@@ -1,0 +1,115 @@
+{
+    "mongodb": {
+        "uri": "localhost:27017",
+        "database": "scaleable_dev",
+        "collection": "tbljobs"
+    },
+    "elasticsearch": {
+        "uri": "http://localhost:9200",
+        "index": "scaleable_dev",
+        "type": "tbljobs"
+    },
+    "query": {
+        "is_active": true
+    },
+    "mapping": {
+        "title": {
+            "es_type": "text"
+        },
+        "slug": {
+            "es_type": "keyword"
+        },
+        "company_name": {
+            "es_type": "text"
+        },
+        "company_logo": {
+            "es_type": "text"
+        },
+        "country": {
+            "es_type": "text"
+        },
+        "descriptionLongPlainText": {
+            "es_type": "text"
+        },
+        "requirementsPlainText": {
+            "es_type": "text"
+        },
+        "jobFunction": {
+            "es_type": "text"
+        },
+        "experience": {
+            "es_type": "text"
+        },
+        "education": {
+            "es_type": "text"
+        },
+        "industry": {
+            "es_type": "text"
+        },
+        "employmentType": {
+            "es_type": "keyword"
+        },
+        "closeDate": {
+            "es_type": "date",
+            "es_format": "strict_date_optional_time||epoch_millis"
+        },
+        "postDate": {
+            "es_type": "date",
+            "es_format": "strict_date_optional_time||epoch_millis"
+        },
+        "location": {
+            "es_type": "text"
+        },
+        "priority": {
+            "es_type": "short"
+        },
+        "source": {
+            "es_type": "text"
+        },
+        "es_experience": {
+            "es_type": "keyword"
+        },
+        "es_company": {
+            "es_type": "keyword"
+
+        },
+        "es_industry": {
+            "es_type": "keyword"
+
+        },
+        "es_function": {
+            "es_type": "keyword"
+
+        },
+        "currency_code": {
+            "es_type": "keyword"
+
+        },
+        "location_country": {
+            "es_type": "keyword"
+
+        },
+        "location_state": {
+            "es_type": "keyword"
+
+        },
+        "location_city": {
+            "es_type": "keyword"
+
+        },
+        "es_extra": {
+            "es_type": "keyword"
+        },
+        "es_suggest_title": {
+            "es_type": "completion"
+        },
+        "salary_min": {
+            "es_type": "scaled_float",
+            "es_scaling_factor": 1
+        },
+        "salary_max": {
+            "es_type": "scaled_float",
+            "es_scaling_factor": 1
+        }
+    }
+}

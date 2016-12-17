@@ -1,0 +1,20 @@
+{
+    "mongodb": {
+        "uri": "localhost:27017",
+        "database": "scaleable_dev",
+        "collection": "tbljobs"
+    },
+    "elasticsearch": {
+        "uri": "http://localhost:9200",
+        "index": "scaleable_dev",
+        "type": "tbljobs"
+    },
+    "query": {
+        "is_active": true
+    },
+    "mapping": {
+        "title": {
+            "es_type": "completion"
+        }
+    }
+}

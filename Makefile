@@ -2,11 +2,11 @@
 .PHONY: test
 
 # Flags #
-GO_FLAGS = -race -o
+GO_FLAGS = -o
 
 # Path configuration #
-GONDEX_DIR = gondex
-GOWATCH_DIR = gowatch
+GONDEX_DIR = cmd/gondex
+GOWATCH_DIR = cmd/gowatch
 BIN_DIR = bin
 # Harcoded bro
 TEST_PKG = github.com/AdhityaRamadhanus/mongoes
@@ -18,12 +18,12 @@ default: test clean build_gondex build_gowatch
 build_gowatch: $(GOWATCH_DIR)/main.go
 	cd $(GOWATCH_DIR); \
 	go build $(GO_FLAGS) $(BIN_DIR)/gowatch.exe; \
-	cd ..; \
+	cd ../..; \
 
 build_gondex: $(GONDEX_DIR)/main.go
 	cd $(GONDEX_DIR); \
 	go build $(GO_FLAGS) $(BIN_DIR)/gondex.exe; \
-	cd ..; \
+	cd ../..; \
 
 
 clean:

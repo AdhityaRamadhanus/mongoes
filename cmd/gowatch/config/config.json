@@ -1,0 +1,12 @@
+{
+    "mongodb": {
+        "uri": "localhost:27018",
+        "database": "scaleable_dev",
+        "collection": "tbljobs"
+    },
+    "elasticsearch": {
+        "uri": "http://localhost:9200",
+        "index": "scaleable_dev",
+        "type": "tbljobs"
+    }
+}
