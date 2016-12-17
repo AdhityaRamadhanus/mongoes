@@ -69,3 +69,29 @@ func TestElasticSearchMappingComplex(t *testing.T) {
 		t.Error("Unexpected Value")
 	}
 }
+
+func TestESRequestBodyBuilder(t *testing.T) {
+	testInput := map[string]interface{}{
+		"title":     "test",
+		"completed": true,
+		"test":      "test1",
+	}
+	testMapping := map[string]interface{}{
+		"title": map[string]interface{}{
+			"es_type": "text",
+		},
+		"completed": map[string]interface{}{
+			"es_type": "boolean",
+		},
+	}
+	testOutput := createEsIndexBody(&testInput, &testMapping)
+	correctOutput := map[string]interface{}{
+		"title":     "test",
+		"completed": true,
+	}
+	if !reflect.DeepEqual(testOutput, correctOutput) {
+		fmt.Println("Actual Val", testOutput)
+		fmt.Println("Expected Val", correctOutput)
+		t.Error("Unexpected Value")
+	}
+}
