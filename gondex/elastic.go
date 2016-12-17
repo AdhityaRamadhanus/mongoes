@@ -7,7 +7,27 @@ import (
 	"strings"
 )
 
-// CreateMapping create Elastic Search Mapping from mongodb collection
+/** CreateMapping create Elastic Search Mapping from mongodb collection
+	Example of mapping input:
+	"mapping": {
+        "title": {
+            "es_type": "text"
+        },
+        "slug": {
+            "es_type": "keyword"
+        }
+    }
+
+    Example of mapping output
+    "properties": {
+		"title": {
+			"type": "text"
+		}
+		"slug": {
+			"type": "keyword"
+		}
+    }
+*/
 func createMapping(doc map[string]interface{}) (map[string]interface{}, error) {
 	mapping := map[string]interface{}{
 		"properties": map[string]interface{}{},
@@ -32,6 +52,7 @@ func createMapping(doc map[string]interface{}) (map[string]interface{}, error) {
 }
 
 // SetupIndexAndMapping will Delete Index and Create new Mapping
+// Beware, this will delete your current index and create new mapping
 func setupIndexAndMapping(esOptions mongoes.ESOptions, rawMapping map[string]interface{}, tracer mongoes.Tracer) error {
 	tracer.Trace("Connecting to elasticsearch cluster ", esOptions.EsURI)
 	client, err := elastic.NewClient(elastic.SetURL(esOptions.EsURI))
