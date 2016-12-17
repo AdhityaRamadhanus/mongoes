@@ -5,13 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"github.com/AdhityaRamadhanus/mongoes"
-	"github.com/spf13/viper"
 	mongo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"os"
 	"time"
 )
 
+// Just error helper to make convenient to print error
 func fatal(e error) {
 	fmt.Println(e)
 	fmt.Println("For More information see https://github.com/AdhityaRamadhanus/mongoes/blob/master/README.md")
@@ -19,33 +19,35 @@ func fatal(e error) {
 }
 
 var (
-	esOptions  mongoes.ESOptions
+	// elasticseach Options, uri, index name and type name
+	esOptions mongoes.ESOptions
+	// mongodb Options, uri, db name and collection name
 	mgoOptions mongoes.MgoOptions
-	configName = flag.String("config", "", "config file")
-	pathConfig = flag.String("path", ".", "config path")
+	pathConfig = flag.String("config", "", "config path")
 )
 
 func init() {
+	// Parse the flag
 	flag.Parse()
-	if len(*configName) == 0 {
-		fatal(errors.New("Please provide config file and config path"))
+	if len(*pathConfig) == 0 {
+		fatal(errors.New("Please provide config path"))
 		os.Exit(1)
 	}
-	viper.SetConfigName(*configName)
-	viper.AddConfigPath(*pathConfig)
-
-	err := viper.ReadInConfig()
+	// Read the json config
+	var config map[string]interface{}
+	err := mongoes.ReadJSONFromFile(*pathConfig, &config)
 	if err != nil {
 		fatal(err)
 		os.Exit(1)
 	}
-	mgoOptions.MgoDbname = viper.GetString("mongodb.database")
-	mgoOptions.MgoCollname = viper.GetString("mongodb.collection")
-	mgoOptions.MgoURI = viper.GetString("mongodb.uri")
 
-	esOptions.EsIndex = viper.GetString("elasticsearch.index")
-	esOptions.EsType = viper.GetString("elasticsearch.type")
-	esOptions.EsURI = viper.GetString("elasticsearch.uri")
+	mgoOptions.MgoDbname = mongoes.GetStringJSON(config, "mongodb.database")
+	mgoOptions.MgoCollname = mongoes.GetStringJSON(config, "mongodb.collection")
+	mgoOptions.MgoURI = mongoes.GetStringJSON(config, "mongodb.uri")
+
+	esOptions.EsIndex = mongoes.GetStringJSON(config, "elasticsearch.index")
+	esOptions.EsType = mongoes.GetStringJSON(config, "elasticsearch.type")
+	esOptions.EsURI = mongoes.GetStringJSON(config, "elasticsearch.uri")
 }
 
 func main() {
@@ -59,7 +61,7 @@ func main() {
 		fatal(err)
 		return
 	}
-
+	// Spawn the oplogs processor
 	oplogs := processOplog(esOptions, selectedField)
 	// Get connected to mongodb
 	tracer.Trace("Connecting to Mongodb at", mgoOptions.MgoURI)
@@ -69,12 +71,17 @@ func main() {
 		return
 	}
 	defer session.Close()
+
+	// Take the oplog collection
 	collection := session.DB("local").C("oplog.rs")
 	fmt.Println("Start Tailing MongoDb")
+
+	// Create mongoTimestampe form Unix Epoch
 	var lastID = bson.MongoTimestamp(time.Now().Unix())
 	lastID <<= 32
 	lastID |= 1
 	var p Oplog
+	// Buld the query and Tail the oplog
 	var nstring = mgoOptions.MgoDbname + "." + mgoOptions.MgoCollname
 	iter := collection.Find(bson.M{"ns": nstring, "ts": bson.M{"$gt": lastID}}).Tail(5 * time.Second)
 	for {
@@ -82,10 +89,12 @@ func main() {
 			lastID = p.Ts
 			oplogs <- p
 		}
+		// Handle Tail Error
 		if iter.Err() != nil {
 			fmt.Println("got error")
 			break
 		}
+		// Handle Tail Timeout
 		if iter.Timeout() {
 			continue
 		}
