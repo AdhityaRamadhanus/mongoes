@@ -8,19 +8,34 @@ import (
 	elastic "gopkg.in/olivere/elastic.v5"
 )
 
+/* 	Get Elasticsearch Mapping
+	Example of Mapping :
+	"properties": {
+      "title": {
+        "type": "text"
+      },
+      "completed": {
+        "type": "boolean"
+      }
+    }
+
+    Now, with this mapping we will take only title and completed field from mongodb
+    documents
+*/
 func getMapping(esOptions mongoes.ESOptions) ([]string, error) {
-	// Get elastic search mapping
+	// Create Elasticsearch client
 	client, err := elastic.NewClient(elastic.SetURL(esOptions.EsURI))
 	if err != nil {
 		return nil, err
 	}
 
+	// Create Elasticsearch client
 	rawMapping, err := client.GetMapping().Index(esOptions.EsIndex).Type(esOptions.EsType).Pretty(true).Do(context.Background())
 	if err != nil {
 		return nil, err
 	}
 	jsonPath := esOptions.EsIndex + ".mappings." + esOptions.EsType + ".properties"
-	esMapping := mongoes.GetDeepObject(rawMapping, jsonPath)
+	esMapping := mongoes.GetObjectJSON(rawMapping, jsonPath)
 	selectedField := make([]string, 1)
 	for key := range esMapping {
 		selectedField = append(selectedField, key)
@@ -28,6 +43,9 @@ func getMapping(esOptions mongoes.ESOptions) ([]string, error) {
 	return selectedField, nil
 }
 
+/* processOplog will return channel of Oplog struct that main groutines
+will send oplog taken from mongodb to that channel
+*/
 func processOplog(esOptions mongoes.ESOptions, selectedField []string) chan<- Oplog {
 	oplogs := make(chan Oplog, 1000)
 	go func(esOptions mongoes.ESOptions, selectedField []string) {

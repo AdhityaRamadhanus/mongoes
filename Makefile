@@ -9,7 +9,7 @@ GONDEX_DIR = gondex
 GOWATCH_DIR = gowatch
 BIN_DIR = bin
 # Harcoded bro
-TEST_PKG = github.com/AdhityaRamadhanus/mongoes/mongoes_test 
+TEST_PKG = github.com/AdhityaRamadhanus/mongoes
 
 # target #
 

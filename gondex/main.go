@@ -5,13 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"github.com/AdhityaRamadhanus/mongoes"
-	"github.com/AdhityaRamadhanus/viper"
 	mongo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	elastic "gopkg.in/olivere/elastic.v5"
 	"os"
 	"os/signal"
-	"runtime"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -21,22 +19,29 @@ var (
 	counts int32
 	// ProgressQueue is channel of int that track how many documents indexed
 	ProgressQueue = make(chan int)
-	esOptions     mongoes.ESOptions
-	mgoOptions    mongoes.MgoOptions
-	mgoQuery      map[string]interface{}
-	esMapping     map[string]interface{}
-	configName    = flag.String("config", "", "config file")
-	pathConfig    = flag.String("path", ".", "config path")
+	// elasticseach Options, uri, index name and type name
+	esOptions mongoes.ESOptions
+	// mongodb Options, uri, db name and collection name
+	mgoOptions mongoes.MgoOptions
+	// Mongodb Query to filter document that will be indexed to elasticsearch
+	// It's json formatted query
+	mgoQuery map[string]interface{}
+	// Elaticsearch Mapping in JSON format
+	// see https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html for more information
+	esMapping  map[string]interface{}
+	pathConfig = flag.String("config", "", "config path")
 	// Done channel signal, main goroutines should exit
 	Done = make(chan struct{})
 )
 
+// Just error helper to make convenient to print error
 func fatal(e error) {
 	fmt.Println(e)
 	fmt.Println("For More information see https://github.com/AdhityaRamadhanus/mongoes/blob/master/README.md")
 	flag.PrintDefaults()
 }
 
+// should be called as new goroutine to display progress of indexing activity
 func peekProgress() {
 	for amounts := range ProgressQueue {
 		atomic.AddInt32(&counts, int32(amounts))
@@ -46,34 +51,32 @@ func peekProgress() {
 }
 
 func init() {
+	// Parse the flag
 	flag.Parse()
-	if len(*configName) == 0 {
-		fatal(errors.New("Please provide config file and config path"))
+	if len(*pathConfig) == 0 {
+		fatal(errors.New("Please provide config path"))
 		os.Exit(1)
 	}
-	viper.SetConfigName(*configName)
-	viper.AddConfigPath(*pathConfig)
-
-	err := viper.ReadInConfig()
+	// Read the json config
+	var config map[string]interface{}
+	err := mongoes.ReadJSONFromFile(*pathConfig, &config)
 	if err != nil {
 		fatal(err)
 		os.Exit(1)
 	}
 
-	mgoOptions.MgoDbname = viper.GetString("mongodb.database")
-	mgoOptions.MgoCollname = viper.GetString("mongodb.collection")
-	mgoOptions.MgoURI = viper.GetString("mongodb.uri")
-	mgoQuery = viper.GetStringMap("query")
-	// tempesOptions := viper.GetStringMap("elasticsearch")
-	// fmt.Println(tempesOptions)
-	esOptions.EsIndex = viper.GetString("elasticsearch.index")
-	esOptions.EsType = viper.GetString("elasticsearch.type")
-	esOptions.EsURI = viper.GetString("elasticsearch.uri")
-	esMapping = viper.GetStringMap("mapping")
+	mgoOptions.MgoDbname = mongoes.GetStringJSON(config, "mongodb.database")
+	mgoOptions.MgoCollname = mongoes.GetStringJSON(config, "mongodb.collection")
+	mgoOptions.MgoURI = mongoes.GetStringJSON(config, "mongodb.uri")
+	mgoQuery = mongoes.GetObjectJSON(config, "query")
+
+	esOptions.EsIndex = mongoes.GetStringJSON(config, "elasticsearch.index")
+	esOptions.EsType = mongoes.GetStringJSON(config, "elasticsearch.type")
+	esOptions.EsURI = mongoes.GetStringJSON(config, "elasticsearch.uri")
+	esMapping = mongoes.GetObjectJSON(config, "mapping")
 }
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
 	var numWorkers = flag.Int("--workers", 2, "Number of concurrent workers")
 	flag.Parse()
 
@@ -95,6 +98,7 @@ func main() {
 	defer session.Close()
 
 	p := make(map[string]interface{})
+	// Get the mongodb documents using cursor
 	iter := session.DB(mgoOptions.MgoDbname).C(mgoOptions.MgoCollname).Find(mgoQuery).Iter()
 	tracer.Trace("Start Indexing MongoDb")
 	// Dispatch workers, returned a channel (work queue)
@@ -108,9 +112,11 @@ func main() {
 		<-termChan
 		Done <- struct{}{}
 	}()
-
+	// Start the timer
 	start := time.Now()
 	for iter.Next(&p) {
+		// take the value from mongodb documents
+		// not all the field in documents will be indexed depends on your mapping
 		var esBody = make(map[string]interface{})
 		for k, v := range esMapping {
 			mgoVal, ok := p[k]
@@ -122,6 +128,7 @@ func main() {
 				esBody[key.(string)] = mgoVal
 			}
 		}
+		// Create Elasticsearch Bulk Index Request
 		bulkRequest := elastic.NewBulkIndexRequest().
 			Index(esOptions.EsIndex).
 			Type(esOptions.EsType).
