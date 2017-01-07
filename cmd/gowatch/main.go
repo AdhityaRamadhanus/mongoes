@@ -24,6 +24,8 @@ var (
 	// mongodb Options, uri, db name and collection name
 	mgoOptions mongoes.MgoOptions
 	pathConfig = flag.String("config", "", "config path")
+	timestamp  = flag.Int64("ts", time.Now().Unix(), "timestamp oplog")
+	lastID     bson.MongoTimestamp
 )
 
 func init() {
@@ -76,8 +78,7 @@ func main() {
 	collection := session.DB("local").C("oplog.rs")
 	fmt.Println("Start Tailing MongoDb")
 
-	// Create mongoTimestampe form Unix Epoch
-	var lastID = bson.MongoTimestamp(time.Now().Unix())
+	lastID = bson.MongoTimestamp(*timestamp)
 	lastID <<= 32
 	lastID |= 1
 	var p Oplog
@@ -86,6 +87,7 @@ func main() {
 	iter := collection.Find(bson.M{"ns": nstring, "ts": bson.M{"$gt": lastID}}).Tail(5 * time.Second)
 	for {
 		for iter.Next(&p) {
+			// fmt.Println(p)
 			lastID = p.Ts
 			oplogs <- p
 		}

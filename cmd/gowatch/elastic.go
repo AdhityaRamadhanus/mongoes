@@ -64,12 +64,12 @@ func processOplog(esOptions mongoes.ESOptions, selectedField []string) chan<- Op
 						indexRequest[v] = p.O[v]
 					}
 				}
-				stringID := p.O["_id"].(bson.ObjectId).Hex()
+				stringID := p.O2["_id"].(bson.ObjectId).Hex()
 				if _, err := indexService.Id(stringID).BodyJson(indexRequest).Do(context.Background()); err == nil {
 					fmt.Println("Successfully indexed")
 				}
 			} else if p.Op == "d" {
-				deleteRequestID := p.O["_id"].(bson.ObjectId).Hex()
+				deleteRequestID := p.O2["_id"].(bson.ObjectId).Hex()
 				fmt.Println(deleteRequestID)
 				if _, err := deleteService.Id(deleteRequestID).Do(context.Background()); err == nil {
 					fmt.Println("Successfully deleted")
