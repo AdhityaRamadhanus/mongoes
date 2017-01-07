@@ -23,7 +23,7 @@ _testmain.go
 *.test
 *.prof
 
-gondex/bin/*
-gondex/config/*
-gowatch/bin/*
-gowatch/config/*
+cmd/gondex/bin/*
+cmd/gondex/config/*
+cmd/gowatch/bin/*
+cmd/gowatch/config/*
