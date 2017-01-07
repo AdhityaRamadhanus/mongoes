@@ -35,7 +35,7 @@ Gondex
 Usage
 ------------
 ```
-gondex --config=<filename> --path=<path>
+gondex --config=<filepath> 
 ```
 * config, Your configuration file (in json)
 * path, Path to the config file (if not provided gondex will search current directory)
@@ -80,9 +80,10 @@ Gowatch
 Usage
 ------------
 ```
-gowatch --config=<filename> --path=<path>
+gowatch --config=<filepath> --ts=1483770841 
 ```
 * config, Your configuration file (in json)
+* ts is unix epoch (seconds), you can replay the oplog by providing a timestamp where gowatch will start applying the oplog
 * path, Path to the config file (if not provided gondex will search current directory)
 * Index and type assumed already have its own mapping, basically gowatch will take field on mongodb documents based on elastic search mapping
 * Config Example
