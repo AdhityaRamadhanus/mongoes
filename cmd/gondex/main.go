@@ -30,7 +30,7 @@ var (
 	// see https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html for more information
 	esMapping  map[string]interface{}
 	pathConfig = flag.String("config", "", "config path")
-	numWorkers = flag.Int("--workers", 2, "Number of concurrent workers")
+	numWorkers = flag.Int("workers", 2, "Number of concurrent workers")
 	// Done channel signal, main goroutines should exit
 	Done = make(chan struct{})
 )

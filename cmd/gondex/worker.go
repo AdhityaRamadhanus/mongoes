@@ -22,7 +22,7 @@ func dispatchWorkers(numWorkers int, esOptions mongoes.ESOptions) chan<- elastic
 		go func(id int, esOptions mongoes.ESOptions, requests <-chan elastic.BulkableRequest) {
 			defer wg.Done()
 			// create new client for each client
-			client, err := elastic.NewClient(elastic.SetURL(esOptions.EsURI))
+			client, err := elastic.NewSimpleClient(elastic.SetURL(esOptions.EsURI))
 			if err != nil {
 				return
 			}

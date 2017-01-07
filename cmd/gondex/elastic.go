@@ -55,7 +55,7 @@ func createMapping(doc map[string]interface{}) (map[string]interface{}, error) {
 // Beware, this will delete your current index and create new mapping
 func setupIndexAndMapping(esOptions mongoes.ESOptions, rawMapping map[string]interface{}, tracer mongoes.Tracer) error {
 	tracer.Trace("Connecting to elasticsearch cluster ", esOptions.EsURI)
-	client, err := elastic.NewClient(elastic.SetURL(esOptions.EsURI))
+	client, err := elastic.NewSimpleClient(elastic.SetURL(esOptions.EsURI))
 	if err != nil {
 		return err
 	}
