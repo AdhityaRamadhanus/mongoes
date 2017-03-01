@@ -43,13 +43,14 @@ func fatalErr(err error) {
 
 // Main Commands Function
 func indexMongoToES(cliContext *cli.Context) {
-	if err := setupEsConfig(cliContext.String("config")); err != nil {
+	if err := setupEsConfig(cliContext); err != nil {
 		fatalErr(err)
 	}
+	log.Println("Setup ES Index and Mapping")
 	if err := setupIndexAndMapping(esOptions, esMapping); err != nil {
 		fatalErr(err)
 	}
-
+	log.Println("Setup Connection to MongoDB")
 	// Get connected to mongodb
 	session, err := mongo.Dial(mgoOptions.MgoURI)
 	if err != nil {
@@ -80,6 +81,7 @@ func indexMongoToES(cliContext *cli.Context) {
 	}()
 
 	// Start the timer
+	log.Println("Indexing Documents, please wait ...")
 	start := time.Now()
 	for iter.Next(&p) {
 		// take the value from mongodb documents
@@ -107,7 +109,8 @@ func indexMongoToES(cliContext *cli.Context) {
 	log.Println(atomic.LoadInt32(&IndexResults), " Documents Indexed in ", elapsed)
 }
 
-func setupEsConfig(configFilePath string) error {
+func setupEsConfig(cliContext *cli.Context) error {
+	configFilePath := cliContext.String("config")
 	if len(configFilePath) == 0 {
 		return errors.New("Please provide config file")
 	}
@@ -126,6 +129,7 @@ func setupEsConfig(configFilePath string) error {
 	esOptions.EsIndex = mongoes.GetStringJSON(config, "elasticsearch.index")
 	esOptions.EsType = mongoes.GetStringJSON(config, "elasticsearch.type")
 	esOptions.EsURI = mongoes.GetStringJSON(config, "elasticsearch.uri")
+	esOptions.BulkIndexNum = cliContext.Int("bulk")
 	esMapping = mongoes.GetObjectJSON(config, "mapping")
 	return nil
 }

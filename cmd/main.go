@@ -21,7 +21,7 @@ func cmdNotFound(c *cli.Context, command string) {
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "gondex"
+	app.Name = "mongoes"
 	app.Author = "Adhitya Ramadhanus"
 	app.Email = "adhitya.ramadhanus@gmail.com"
 
@@ -29,13 +29,6 @@ func main() {
 	app.CommandNotFound = cmdNotFound // Inspired by docker machine
 	app.Usage = "Index Mongodb Collection to ES"
 	app.Version = "1.0.0"
-
-	app.Flags = []cli.Flag{
-		cli.BoolFlag{
-			Name:  "debug",
-			Usage: "Enable debug mode",
-		},
-	}
 
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)

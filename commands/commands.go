@@ -20,6 +20,11 @@ var Commands = cli.Commands{
 				Value: 2,
 				Usage: "Number of workers to index the mongo collection",
 			},
+			cli.IntFlag{
+				Name:  "bulk",
+				Value: 1000,
+				Usage: "Number of documents to index per bulk request",
+			},
 		},
 	},
 }
