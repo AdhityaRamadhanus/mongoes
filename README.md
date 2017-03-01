@@ -30,7 +30,7 @@ Usage
 mongoes --help
 
 NAME:
-   gondex - Index Mongodb Collection to ES
+   mongoes - Index Mongodb Collection to ES
 
 USAGE:
    mongoes [global options] command [command options] [arguments...]
@@ -46,7 +46,6 @@ COMMANDS:
      help, h  Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
-   --verbose      Enable verbose mode
    --help, -h     show help
    --version, -v  print the version
 ```
