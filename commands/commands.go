@@ -8,7 +8,7 @@ var Commands = cli.Commands{
 	{
 		Name:   "index",
 		Usage:  "Index collection to elasticsearch",
-		Action: indexMongoToES,
+		Action: IndexMongoToES,
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:  "config",

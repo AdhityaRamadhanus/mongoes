@@ -23,7 +23,4 @@ _testmain.go
 *.test
 *.prof
 
-cmd/gondex/bin/*
-cmd/gondex/config/*.json
-cmd/gowatch/config/*.json
-cmd/gowatch/bin/*
+cmd/bin/*

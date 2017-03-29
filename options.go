@@ -6,6 +6,7 @@ type ESOptions struct {
 	EsType       string
 	EsURI        string
 	BulkIndexNum int
+	EsMapping    map[string]interface{}
 }
 
 // MgoOptions is optiosn struct for mongo, included is database name, collection name, and URI for mongo
@@ -13,4 +14,5 @@ type MgoOptions struct {
 	MgoDbname   string
 	MgoCollname string
 	MgoURI      string
+	MgoQuery    map[string]interface{}
 }
