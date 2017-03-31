@@ -1,4 +1,4 @@
-package main
+package elastic
 
 import (
 	"fmt"
@@ -15,10 +15,7 @@ func TestElasticSearchMappingSimple(t *testing.T) {
 			"es_type": "text",
 		},
 	}
-	testOutput, err := createMapping(testInput)
-	if err != nil {
-		t.Error("Got Error on creating Mapping", err)
-	}
+	testOutput := CreateMapping(testInput)
 	correctOutput := map[string]interface{}{
 		"properties": map[string]interface{}{
 			"title": map[string]interface{}{
@@ -47,10 +44,7 @@ func TestElasticSearchMappingComplex(t *testing.T) {
 			"es_scaling_factor": 1,
 		},
 	}
-	testOutput, err := createMapping(testInput)
-	if err != nil {
-		t.Error("Got Error on creating Mapping", err)
-	}
+	testOutput := CreateMapping(testInput)
 	correctOutput := map[string]interface{}{
 		"properties": map[string]interface{}{
 			"closeDate": map[string]interface{}{
@@ -84,7 +78,7 @@ func TestESRequestBodyBuilder(t *testing.T) {
 			"es_type": "boolean",
 		},
 	}
-	testOutput := createEsIndexBody(&testInput, &testMapping)
+	testOutput := CreateEsIndexBody(&testInput, &testMapping)
 	correctOutput := map[string]interface{}{
 		"title":     "test",
 		"completed": true,
