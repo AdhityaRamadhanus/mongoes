@@ -15,7 +15,7 @@ build_mongoes:
 ifeq ($(OS),Linux)
 	mkdir -p build/linux
 	@echo "Build Mongoes..."
-	GOOS=linux  go build -ldflags "-X main.Version=$(VERSION)" -o build/linux/$(CLI_NAME) cmd/main.go
+	GOOS=linux  go build -ldflags "-s -w -X main.Version=$(VERSION)" -o build/linux/$(CLI_NAME) cmd/main.go
 endif
 ifeq ($(OS) ,Darwin)
 	@echo "Build Mongoes..."

@@ -2,6 +2,7 @@ package elastic
 
 import (
 	"context"
+	"log"
 	"sync/atomic"
 
 	"sync"
@@ -42,12 +43,14 @@ func (w *ElasticWorker) enquiryWork(jobQueue <-chan elastic.BulkableRequest) {
 		if bulkService.NumberOfActions() == 1000 {
 			bulkResponse, _ := bulkService.Do(context.Background())
 			atomic.AddInt32(&w.IndexResults, int32(len(bulkResponse.Indexed())))
+			log.Println("Indexed", atomic.LoadInt32(&w.IndexResults))
 		}
 		// Bulk Index the left over
 	}
 	if bulkService.NumberOfActions() > 0 {
 		bulkResponse, _ := bulkService.Do(context.Background())
 		atomic.AddInt32(&w.IndexResults, int32(len(bulkResponse.Indexed())))
+		log.Println("Indexed", atomic.LoadInt32(&w.IndexResults))
 	}
 }
 
